@@ -1,14 +1,51 @@
 import { Users, Truck, AlertTriangle, MapPin } from "lucide-react";
 import { MapPlaceholder } from "@/components/MapPlaceholder";
 import { StatusBadge, statusVariant } from "@/components/StatusBadge";
-import { teams, incidents } from "@/data/mock";
+import { SeverityBadge, severityFromStatus } from "@/components/SeverityBadge";
+import { Sparkline } from "@/components/Sparkline";
+import { WeatherCard } from "@/components/WeatherCard";
+import { FieldUpdates } from "@/components/FieldUpdates";
+import { ElapsedTimer } from "@/components/ElapsedTimer";
+import { teams, incidents, incidentElapsedStart } from "@/data/mock";
 import { useState } from "react";
 
 const stats = [
-  { label: "Active Teams", value: 12, icon: Users, accent: "text-primary", bg: "bg-primary/10" },
-  { label: "Vehicles Deployed", value: 28, icon: Truck, accent: "text-info", bg: "bg-info/10" },
-  { label: "Incidents Open", value: 7, icon: AlertTriangle, accent: "text-warning", bg: "bg-warning/10" },
-  { label: "Areas Covered", value: 5, icon: MapPin, accent: "text-success", bg: "bg-success/10" },
+  {
+    label: "Active Teams",
+    value: 12,
+    icon: Users,
+    accent: "text-primary",
+    bg: "bg-primary/10",
+    trend: [4, 5, 6, 8, 9, 11, 12],
+    trendColor: "text-primary",
+  },
+  {
+    label: "Vehicles Deployed",
+    value: 28,
+    icon: Truck,
+    accent: "text-info",
+    bg: "bg-info/10",
+    trend: [27, 28, 28, 27, 28, 29, 28],
+    trendColor: "text-info",
+  },
+  {
+    label: "Incidents Open",
+    value: 7,
+    icon: AlertTriangle,
+    accent: "text-warning",
+    bg: "bg-warning/10",
+    trend: [14, 13, 12, 11, 10, 8, 7],
+    trendColor: "text-success",
+  },
+  {
+    label: "Areas Covered",
+    value: 5,
+    icon: MapPin,
+    accent: "text-success",
+    bg: "bg-success/10",
+    trend: [2, 2, 3, 3, 4, 5, 5],
+    trendColor: "text-success",
+  },
 ];
 
 export default function Dashboard() {
@@ -37,6 +74,7 @@ export default function Dashboard() {
                 <s.icon className="h-5 w-5" />
               </div>
             </div>
+            <Sparkline points={s.trend} className={`mt-3 ${s.trendColor}`} width={120} height={28} />
           </div>
         ))}
       </div>
@@ -44,12 +82,15 @@ export default function Dashboard() {
       {/* Map + Live Status */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Live Field Map</h2>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="h-1.5 w-1.5 rounded-full bg-success pulse-blue" />
-              Updated 3s ago
+          <div className="mb-2 flex flex-col md:flex-row md:items-center justify-between gap-2">
+            <div className="flex items-center gap-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Live Field Map</h2>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="h-1.5 w-1.5 rounded-full bg-success pulse-blue" />
+                Updated 3s ago
+              </div>
             </div>
+            <WeatherCard />
           </div>
           <MapPlaceholder
             className="h-[420px] w-full"
@@ -87,40 +128,46 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Recent Incidents */}
-      <div className="rounded-lg border border-border bg-card shadow-card">
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Recent Incidents</h2>
-          <span className="text-xs text-muted-foreground">Last 24 hours</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-xs uppercase tracking-wider text-muted-foreground">
-              <tr className="border-b border-border">
-                <th className="px-4 py-3 text-left font-medium">Incident ID</th>
-                <th className="px-4 py-3 text-left font-medium">Location</th>
-                <th className="px-4 py-3 text-left font-medium">Type</th>
-                <th className="px-4 py-3 text-left font-medium">Assigned Team</th>
-                <th className="px-4 py-3 text-left font-medium">Status</th>
-                <th className="px-4 py-3 text-left font-medium">Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              {incidents.map((i) => (
-                <tr key={i.id} className="border-b border-border/60 hover:bg-accent/30 transition-colors">
-                  <td className="px-4 py-3 font-mono text-xs text-primary">{i.id}</td>
-                  <td className="px-4 py-3">{i.location}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{i.type}</td>
-                  <td className="px-4 py-3">{i.team}</td>
-                  <td className="px-4 py-3">
-                    <StatusBadge variant={statusVariant(i.status)}>{i.status}</StatusBadge>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs">{i.time}</td>
+      {/* Recent Incidents + Field Updates */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 rounded-lg border border-border bg-card shadow-card">
+          <div className="flex items-center justify-between p-4 border-b border-border">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Recent Incidents</h2>
+            <span className="text-xs text-muted-foreground">Last 24 hours</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-xs uppercase tracking-wider text-muted-foreground">
+                <tr className="border-b border-border">
+                  <th className="px-4 py-3 text-left font-medium">Incident ID</th>
+                  <th className="px-4 py-3 text-left font-medium">Location</th>
+                  <th className="px-4 py-3 text-left font-medium">Type</th>
+                  <th className="px-4 py-3 text-left font-medium">Assigned Team</th>
+                  <th className="px-4 py-3 text-left font-medium">Severity</th>
+                  <th className="px-4 py-3 text-left font-medium">Elapsed</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {incidents.map((i) => (
+                  <tr key={i.id} className="border-b border-border/60 hover:bg-accent/30 transition-colors">
+                    <td className="px-4 py-3 font-mono text-xs text-primary">{i.id}</td>
+                    <td className="px-4 py-3">{i.location}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{i.type}</td>
+                    <td className="px-4 py-3">{i.team}</td>
+                    <td className="px-4 py-3">
+                      <SeverityBadge severity={severityFromStatus(i.status)} />
+                    </td>
+                    <td className="px-4 py-3 text-xs">
+                      <ElapsedTimer startMinutesAgo={incidentElapsedStart[i.id] ?? 0} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
+
+        <FieldUpdates />
       </div>
     </div>
   );

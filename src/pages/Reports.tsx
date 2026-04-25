@@ -1,6 +1,13 @@
-import { FileBarChart, CheckCircle, Clock } from "lucide-react";
+import { FileBarChart, CheckCircle, Clock, Package } from "lucide-react";
 import { StatusBadge, statusVariant } from "@/components/StatusBadge";
-import { incidents, zoneStats } from "@/data/mock";
+import { incidents, zoneStats, supplies } from "@/data/mock";
+import { cn } from "@/lib/utils";
+
+const supplyStatusVariant = (s: string): "green" | "amber" | "red" =>
+  s === "Sufficient" ? "green" : s === "Low" ? "amber" : "red";
+
+const supplyBarColor = (s: string) =>
+  s === "Sufficient" ? "bg-success" : s === "Low" ? "bg-warning" : "bg-primary";
 
 export default function Reports() {
   const total = incidents.length;
@@ -101,6 +108,64 @@ export default function Reports() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      </div>
+
+      {/* Supplies */}
+      <div className="rounded-lg border border-border bg-card shadow-card">
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <Package className="h-4 w-4 text-primary" /> Resource & Supply Tracker
+          </h2>
+          <span className="text-xs text-muted-foreground">Updated 5 min ago</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-xs uppercase tracking-wider text-muted-foreground">
+              <tr className="border-b border-border">
+                <th className="px-4 py-3 text-left font-medium">Zone</th>
+                <th className="px-4 py-3 text-right font-medium">Food Packets</th>
+                <th className="px-4 py-3 text-right font-medium">Water (L)</th>
+                <th className="px-4 py-3 text-right font-medium">Medical Kits</th>
+                <th className="px-4 py-3 text-right font-medium">Blankets</th>
+                <th className="px-4 py-3 text-left font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {supplies.map((s) => (
+                <tr key={s.zone} className="border-b border-border/60 hover:bg-accent/30 transition-colors">
+                  <td className="px-4 py-3 font-medium">{s.zone}</td>
+                  <td className="px-4 py-3 text-right tabular-nums">{s.food.toLocaleString()}</td>
+                  <td className="px-4 py-3 text-right tabular-nums">{s.water.toLocaleString()}</td>
+                  <td className="px-4 py-3 text-right tabular-nums">{s.medical}</td>
+                  <td className="px-4 py-3 text-right tabular-nums">{s.blankets}</td>
+                  <td className="px-4 py-3">
+                    <StatusBadge variant={supplyStatusVariant(s.status)}>{s.status}</StatusBadge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="p-5 border-t border-border">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+            Supply Coverage by Zone
+          </h3>
+          <div className="space-y-2.5">
+            {supplies.map((s) => (
+              <div key={s.zone} className="flex items-center gap-3">
+                <div className="w-40 text-xs text-muted-foreground truncate">{s.zone}</div>
+                <div className="flex-1 h-3 rounded-full bg-background border border-border overflow-hidden">
+                  <div
+                    className={cn("h-full rounded-full transition-all", supplyBarColor(s.status))}
+                    style={{ width: `${s.coverage}%` }}
+                  />
+                </div>
+                <div className="w-12 text-right text-xs font-mono tabular-nums">{s.coverage}%</div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

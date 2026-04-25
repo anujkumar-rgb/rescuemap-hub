@@ -2,6 +2,8 @@ import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { LayoutDashboard, Map, Users, Bell, FileBarChart, Radio, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SosBanner } from "./SosBanner";
+import { CriticalAlertBar } from "./CriticalAlertBar";
 
 const links = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -13,8 +15,12 @@ const links = [
 
 export default function Layout() {
   const [open, setOpen] = useState(false);
+  const [sosActive, setSosActive] = useState(true);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {sosActive && <SosBanner onDismiss={() => setSosActive(false)} />}
+
       <header className="sticky top-0 z-40 border-b border-border bg-card/80 backdrop-blur-md">
         <div className="flex h-16 items-center justify-between px-4 md:px-8">
           <div className="flex items-center gap-3">
@@ -86,6 +92,8 @@ export default function Layout() {
           </nav>
         )}
       </header>
+
+      <CriticalAlertBar count={2} />
 
       <main className="px-4 md:px-8 py-6 animate-fade-in">
         <Outlet />
