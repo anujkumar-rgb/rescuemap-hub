@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
-import { teams, incidents, zoneRisk, type ZoneRisk } from "@/data/mock";
-import { MapPin, Truck, AlertTriangle } from "lucide-react";
+import { zoneRisk, type ZoneRisk } from "@/data/mock";
+import { MapPin, Truck, AlertTriangle, Loader2 } from "lucide-react";
+import { useTeamsQuery, useIncidentsQuery, useVehiclesQuery } from "@/hooks/useQueries";
 
 interface Props {
   className?: string;
@@ -10,18 +11,6 @@ interface Props {
   showTeams?: boolean;
   showIncidents?: boolean;
 }
-
-const incidentPins = [
-  { id: "INC-1043", x: 25, y: 42 },
-  { id: "INC-1042", x: 60, y: 28 },
-  { id: "INC-1039", x: 32, y: 72 },
-];
-
-const vehiclePins = [
-  { id: "V-201", x: 45, y: 50 },
-  { id: "V-202", x: 62, y: 35 },
-  { id: "V-204", x: 28, y: 68 },
-];
 
 const zones: { label: string; x: number; y: number }[] = [
   { label: "Zone A", x: 18, y: 30 },
@@ -45,8 +34,20 @@ export function MapPlaceholder({
   showTeams = true,
   showIncidents = true,
 }: Props) {
+  const { data: teams, isLoading: teamsLoading } = useTeamsQuery();
+  const { data: incidents, isLoading: incidentsLoading } = useIncidentsQuery();
+  const { data: vehicles, isLoading: vehiclesLoading } = useVehiclesQuery();
+
+  const isLoading = teamsLoading || incidentsLoading || vehiclesLoading;
+
   return (
     <div className={cn("relative overflow-hidden rounded-lg border border-border map-grid-lg", className)}>
+      {isLoading && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/20 backdrop-blur-[1px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      )}
+
       {/* compass / scale */}
       <div className="absolute top-3 left-3 z-10 rounded-md bg-card/80 backdrop-blur px-2 py-1 text-[10px] font-mono uppercase tracking-widest text-muted-foreground border border-border">
         MUMBAI METRO • LIVE
@@ -84,11 +85,11 @@ export function MapPlaceholder({
 
       {/* Incident pins */}
       {showIncidents &&
-        incidentPins.map((p) => (
+        incidents?.filter(i => i.status !== 'Resolved').map((p) => (
           <div
             key={p.id}
             className="absolute -translate-x-1/2 -translate-y-1/2"
-            style={{ left: `${p.x}%`, top: `${p.y}%` }}
+            style={{ left: `${Math.random() * 60 + 20}%`, top: `${Math.random() * 60 + 20}%` }} // Simplified for demo if no specific coordinates
             title={p.id}
           >
             <div className="relative h-7 w-7">
@@ -102,11 +103,11 @@ export function MapPlaceholder({
 
       {/* Vehicle pins */}
       {showVehicles &&
-        vehiclePins.map((p) => (
+        vehicles?.filter(v => v.status === 'Active').map((p) => (
           <div
             key={p.id}
             className="absolute -translate-x-1/2 -translate-y-1/2"
-            style={{ left: `${p.x}%`, top: `${p.y}%` }}
+            style={{ left: `${Math.random() * 60 + 20}%`, top: `${Math.random() * 60 + 20}%` }}
             title={p.id}
           >
             <div className="flex h-6 w-6 items-center justify-center rounded-full bg-success text-success-foreground border-2 border-background">
@@ -117,7 +118,7 @@ export function MapPlaceholder({
 
       {/* Team pins */}
       {showTeams &&
-        teams.map((t) => {
+        teams?.map((t) => {
           const colorBg =
             t.color === "red" ? "bg-primary" : t.color === "blue" ? "bg-info" : "bg-success";
           const ringColor =
@@ -129,7 +130,7 @@ export function MapPlaceholder({
               key={t.id}
               onClick={() => onSelectTeam?.(t.id)}
               className="absolute -translate-x-1/2 -translate-y-1/2 group"
-              style={{ left: `${t.pin.x}%`, top: `${t.pin.y}%` }}
+              style={{ left: `${t.pin_x}%`, top: `${t.pin_y}%` }}
             >
               <div className="relative h-6 w-6">
                 {showRing && <span className={cn("ping-ring", ringColor)} />}

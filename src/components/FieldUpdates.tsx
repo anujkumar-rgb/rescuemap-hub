@@ -1,5 +1,5 @@
-import { Radio } from "lucide-react";
-import { fieldUpdates } from "@/data/mock";
+import { Radio, Loader2 } from "lucide-react";
+import { useFieldUpdatesQuery } from "@/hooks/useQueries";
 import { cn } from "@/lib/utils";
 
 const borderClass: Record<string, string> = {
@@ -9,6 +9,8 @@ const borderClass: Record<string, string> = {
 };
 
 export function FieldUpdates({ className }: { className?: string }) {
+  const { data: updates, isLoading } = useFieldUpdatesQuery();
+
   return (
     <div className={cn("rounded-lg border border-border bg-card shadow-card flex flex-col", className)}>
       <div className="flex items-center justify-between p-4 border-b border-border">
@@ -20,21 +22,27 @@ export function FieldUpdates({ className }: { className?: string }) {
         </span>
       </div>
       <ul className="flex-1 overflow-y-auto max-h-[420px] divide-y divide-border/60">
-        {fieldUpdates.map((u) => (
-          <li
-            key={u.id}
-            className={cn(
-              "border-l-4 px-4 py-3 hover:bg-accent/30 transition-colors",
-              borderClass[u.kind]
-            )}
-          >
-            <div className="flex items-baseline gap-2 text-xs text-muted-foreground">
-              <span className="font-mono">{u.time}</span>
-              <span className="font-semibold text-foreground">{u.unit}</span>
-            </div>
-            <p className="mt-1 text-sm leading-snug">{u.message}</p>
-          </li>
-        ))}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          updates?.map((u) => (
+            <li
+              key={u.id}
+              className={cn(
+                "border-l-4 px-4 py-3 hover:bg-accent/30 transition-colors",
+                borderClass[u.kind]
+              )}
+            >
+              <div className="flex items-baseline gap-2 text-xs text-muted-foreground">
+                <span className="font-mono">{u.time}</span>
+                <span className="font-semibold text-foreground">{u.unit}</span>
+              </div>
+              <p className="mt-1 text-sm leading-snug">{u.message}</p>
+            </li>
+          ))
+        )}
       </ul>
     </div>
   );

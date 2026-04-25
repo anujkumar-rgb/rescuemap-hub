@@ -1,4 +1,4 @@
-import { Users, Truck, AlertTriangle, MapPin } from "lucide-react";
+import { Users, Truck, AlertTriangle, MapPin, Loader2 } from "lucide-react";
 import { MapPlaceholder } from "@/components/MapPlaceholder";
 import { StatusBadge, statusVariant } from "@/components/StatusBadge";
 import { SeverityBadge, severityFromStatus } from "@/components/SeverityBadge";
@@ -6,8 +6,10 @@ import { Sparkline } from "@/components/Sparkline";
 import { WeatherCard } from "@/components/WeatherCard";
 import { FieldUpdates } from "@/components/FieldUpdates";
 import { ElapsedTimer } from "@/components/ElapsedTimer";
-import { teams, incidents, incidentElapsedStart } from "@/data/mock";
+import { incidentElapsedStart } from "@/data/mock";
 import { useState } from "react";
+import { useTeamsQuery, useIncidentsQuery } from "@/hooks/useQueries";
+import { useAuth } from "@/hooks/useAuth";
 
 const stats = [
   {
@@ -50,6 +52,11 @@ const stats = [
 
 export default function Dashboard() {
   const [selected, setSelected] = useState<string | null>(null);
+  const { data: teams, isLoading: teamsLoading } = useTeamsQuery();
+  const { data: incidents, isLoading: incidentsLoading } = useIncidentsQuery();
+  const { session } = useAuth();
+
+  console.log("Supabase Session:", session);
 
   return (
     <div className="space-y-6">
@@ -101,30 +108,36 @@ export default function Dashboard() {
 
         <div className="rounded-lg border border-border bg-card p-4 shadow-card">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Live Team Status</h2>
-          <ul className="space-y-2">
-            {teams.map((t) => (
-              <li
-                key={t.id}
-                onClick={() => setSelected(t.id)}
-                className="flex items-center justify-between rounded-md border border-border bg-background/40 p-3 cursor-pointer hover:border-primary/40 hover:bg-accent/40 transition-colors"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <span
-                    className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
-                      t.color === "red" ? "bg-primary" : t.color === "blue" ? "bg-info" : "bg-success"
-                    }`}
-                  />
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium truncate">{t.name}</div>
-                    <div className="text-[11px] text-muted-foreground truncate">{t.zone}</div>
+          {teamsLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {teams?.map((t) => (
+                <li
+                  key={t.id}
+                  onClick={() => setSelected(t.id)}
+                  className="flex items-center justify-between rounded-md border border-border bg-background/40 p-3 cursor-pointer hover:border-primary/40 hover:bg-accent/40 transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span
+                      className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
+                        t.color === "red" ? "bg-primary" : t.color === "blue" ? "bg-info" : "bg-success"
+                      }`}
+                    />
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium truncate">{t.name}</div>
+                      <div className="text-[11px] text-muted-foreground truncate">{t.zone}</div>
+                    </div>
                   </div>
-                </div>
-                <StatusBadge variant={statusVariant(t.status)} dot={false}>
-                  {t.status}
-                </StatusBadge>
-              </li>
-            ))}
-          </ul>
+                  <StatusBadge variant={statusVariant(t.status)} dot={false}>
+                    {t.status}
+                  </StatusBadge>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
 
@@ -148,20 +161,29 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {incidents.map((i) => (
-                  <tr key={i.id} className="border-b border-border/60 hover:bg-accent/30 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs text-primary">{i.id}</td>
-                    <td className="px-4 py-3">{i.location}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{i.type}</td>
-                    <td className="px-4 py-3">{i.team}</td>
-                    <td className="px-4 py-3">
-                      <SeverityBadge severity={severityFromStatus(i.status)} />
-                    </td>
-                    <td className="px-4 py-3 text-xs">
-                      <ElapsedTimer startMinutesAgo={incidentElapsedStart[i.id] ?? 0} />
+                {incidentsLoading ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-10 text-center">
+                      <Loader2 className="h-5 w-5 animate-spin inline mr-2 text-muted-foreground" />
+                      Loading incidents...
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  incidents?.map((i) => (
+                    <tr key={i.id} className="border-b border-border/60 hover:bg-accent/30 transition-colors">
+                      <td className="px-4 py-3 font-mono text-xs text-primary">{i.id}</td>
+                      <td className="px-4 py-3">{i.location}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{i.type}</td>
+                      <td className="px-4 py-3">{i.team}</td>
+                      <td className="px-4 py-3">
+                        <SeverityBadge severity={severityFromStatus(i.status)} />
+                      </td>
+                      <td className="px-4 py-3 text-xs">
+                        <ElapsedTimer startMinutesAgo={incidentElapsedStart[i.id] ?? 0} />
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

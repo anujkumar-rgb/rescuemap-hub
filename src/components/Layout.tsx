@@ -4,6 +4,9 @@ import { LayoutDashboard, Map, Users, Bell, FileBarChart, Radio, Menu, X } from 
 import { cn } from "@/lib/utils";
 import { SosBanner } from "./SosBanner";
 import { CriticalAlertBar } from "./CriticalAlertBar";
+import { useAuth } from "@/hooks/useAuth";
+import { LogOut } from "lucide-react";
+import { Button } from "./ui/button";
 
 const links = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -16,6 +19,13 @@ const links = [
 export default function Layout() {
   const [open, setOpen] = useState(false);
   const [sosActive, setSosActive] = useState(true);
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/login");
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -28,7 +38,7 @@ export default function Layout() {
               <Radio className="h-5 w-5 text-primary-foreground" />
             </div>
             <div>
-              <div className="text-lg font-bold tracking-tight">RescueTrack</div>
+              <div className="text-lg font-bold tracking-tight">ResqNet</div>
               <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Disaster Relief Ops</div>
             </div>
           </div>
@@ -54,11 +64,22 @@ export default function Layout() {
             ))}
           </nav>
 
-          <div className="hidden md:flex items-center gap-3">
-            <div className="flex items-center gap-2 rounded-full bg-success/10 px-3 py-1 text-xs font-medium text-success">
-              <span className="h-2 w-2 rounded-full bg-success pulse-blue" />
-              System Online
+          <div className="hidden md:flex items-center gap-4">
+            <div className="flex flex-col items-end">
+              <div className="flex items-center gap-2 rounded-full bg-success/10 px-3 py-1 text-[10px] font-medium text-success">
+                <span className="h-1.5 w-1.5 rounded-full bg-success pulse-blue" />
+                System Online
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-1 lowercase">{user?.email}</div>
             </div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleLogout}
+              className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
 
           <button

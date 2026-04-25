@@ -1,6 +1,6 @@
-import { FileBarChart, CheckCircle, Clock, Package } from "lucide-react";
+import { FileBarChart, CheckCircle, Clock, Package, Loader2 } from "lucide-react";
 import { StatusBadge, statusVariant } from "@/components/StatusBadge";
-import { incidents, zoneStats, supplies } from "@/data/mock";
+import { useIncidentsQuery, useSuppliesQuery } from "@/hooks/useQueries";
 import { cn } from "@/lib/utils";
 
 const supplyStatusVariant = (s: string): "green" | "amber" | "red" =>
@@ -10,10 +10,21 @@ const supplyBarColor = (s: string) =>
   s === "Sufficient" ? "bg-success" : s === "Low" ? "bg-warning" : "bg-primary";
 
 export default function Reports() {
-  const total = incidents.length;
-  const resolved = incidents.filter((i) => i.status === "Resolved").length;
-  const avg = Math.round(incidents.reduce((a, b) => a + b.responseMin, 0) / total);
-  const maxZone = Math.max(...zoneStats.map((z) => z.count));
+  const { data: incidents, isLoading: incidentsLoading } = useIncidentsQuery();
+  const { data: supplies, isLoading: suppliesLoading } = useSuppliesQuery();
+
+  const total = incidents?.length || 0;
+  const resolved = incidents?.filter((i) => i.status === "Resolved").length || 0;
+  const avg = total > 0 ? Math.round(incidents!.reduce((a, b) => a + (b.response_min || 0), 0) / total) : 0;
+
+  // Derive zone stats from incidents
+  const zoneCounts: Record<string, number> = {};
+  incidents?.forEach(i => {
+    const zone = i.location.split(' - ')[0] || 'Unknown';
+    zoneCounts[zone] = (zoneCounts[zone] || 0) + 1;
+  });
+  const zoneStats = Object.entries(zoneCounts).map(([zone, count]) => ({ zone, count }));
+  const maxZone = Math.max(...zoneStats.map((z) => z.count), 1);
 
   const cards = [
     { label: "Total Incidents", value: total, icon: FileBarChart, accent: "text-primary", bg: "bg-primary/10" },
@@ -34,7 +45,9 @@ export default function Reports() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-xs uppercase tracking-wider text-muted-foreground">{c.label}</div>
-                <div className="mt-1 text-3xl font-bold">{c.value}</div>
+                <div className="mt-1 text-3xl font-bold">
+                  {incidentsLoading ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : c.value}
+                </div>
               </div>
               <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${c.bg} ${c.accent}`}>
                 <c.icon className="h-6 w-6" />
@@ -64,23 +77,32 @@ export default function Reports() {
                 </tr>
               </thead>
               <tbody>
-                {incidents.map((i) => (
-                  <tr key={i.id} className="border-b border-border/60 hover:bg-accent/30 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs text-primary">{i.id}</td>
-                    <td className="px-4 py-3">{i.type}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{i.location}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{i.team}</td>
-                    <td className="px-4 py-3 tabular-nums">{i.responseMin} min</td>
-                    <td className="px-4 py-3">
-                      <StatusBadge variant={statusVariant(i.status)}>{i.status}</StatusBadge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button className="rounded-md border border-border bg-background px-3 py-1 text-xs font-semibold hover:border-primary/40 hover:text-primary transition-colors">
-                        View
-                      </button>
+                {incidentsLoading ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-20 text-center text-muted-foreground">
+                      <Loader2 className="h-8 w-8 animate-spin inline mb-2" /><br/>
+                      Loading reports...
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  incidents?.map((i) => (
+                    <tr key={i.id} className="border-b border-border/60 hover:bg-accent/30 transition-colors">
+                      <td className="px-4 py-3 font-mono text-xs text-primary">{i.id}</td>
+                      <td className="px-4 py-3">{i.type}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{i.location}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{i.team}</td>
+                      <td className="px-4 py-3 tabular-nums">{i.response_min} min</td>
+                      <td className="px-4 py-3">
+                        <StatusBadge variant={statusVariant(i.status)}>{i.status}</StatusBadge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button className="rounded-md border border-border bg-background px-3 py-1 text-xs font-semibold hover:border-primary/40 hover:text-primary transition-colors">
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -89,25 +111,31 @@ export default function Reports() {
         {/* Bar chart */}
         <div className="rounded-lg border border-border bg-card p-5 shadow-card">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Incidents by Zone</h2>
-          <p className="text-xs text-muted-foreground mt-1">Past 30 days</p>
+          <p className="text-xs text-muted-foreground mt-1">Operational Heatmap</p>
 
           <div className="mt-6 flex items-end justify-between gap-3 h-56">
-            {zoneStats.map((z) => {
-              const h = (z.count / maxZone) * 100;
-              return (
-                <div key={z.zone} className="flex-1 flex flex-col items-center gap-2">
-                  <div className="text-xs font-bold tabular-nums">{z.count}</div>
-                  <div className="w-full flex-1 flex items-end">
-                    <div
-                      className="w-full rounded-t-md bg-gradient-emergency hover:opacity-80 transition-all cursor-pointer"
-                      style={{ height: `${h}%` }}
-                      title={`${z.zone}: ${z.count}`}
-                    />
+            {incidentsLoading ? (
+              <div className="w-full h-full flex items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              zoneStats.map((z) => {
+                const h = (z.count / maxZone) * 100;
+                return (
+                  <div key={z.zone} className="flex-1 flex flex-col items-center gap-2">
+                    <div className="text-xs font-bold tabular-nums">{z.count}</div>
+                    <div className="w-full flex-1 flex items-end">
+                      <div
+                        className="w-full rounded-t-md bg-gradient-emergency hover:opacity-80 transition-all cursor-pointer"
+                        style={{ height: `${Math.max(h, 5)}%` }}
+                        title={`${z.zone}: ${z.count}`}
+                      />
+                    </div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground truncate w-full text-center">{z.zone}</div>
                   </div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{z.zone}</div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
       </div>
@@ -118,7 +146,7 @@ export default function Reports() {
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
             <Package className="h-4 w-4 text-primary" /> Resource & Supply Tracker
           </h2>
-          <span className="text-xs text-muted-foreground">Updated 5 min ago</span>
+          <span className="text-xs text-muted-foreground">Live Database Status</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -133,18 +161,26 @@ export default function Reports() {
               </tr>
             </thead>
             <tbody>
-              {supplies.map((s) => (
-                <tr key={s.zone} className="border-b border-border/60 hover:bg-accent/30 transition-colors">
-                  <td className="px-4 py-3 font-medium">{s.zone}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{s.food.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{s.water.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{s.medical}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{s.blankets}</td>
-                  <td className="px-4 py-3">
-                    <StatusBadge variant={supplyStatusVariant(s.status)}>{s.status}</StatusBadge>
+              {suppliesLoading ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
+                    <Loader2 className="h-8 w-8 animate-spin inline mb-2" />
                   </td>
                 </tr>
-              ))}
+              ) : (
+                supplies?.map((s) => (
+                  <tr key={s.id} className="border-b border-border/60 hover:bg-accent/30 transition-colors">
+                    <td className="px-4 py-3 font-medium">{s.zone}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{s.food.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{s.water.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{s.medical}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{s.blankets}</td>
+                    <td className="px-4 py-3">
+                      <StatusBadge variant={supplyStatusVariant(s.status)}>{s.status}</StatusBadge>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -154,18 +190,22 @@ export default function Reports() {
             Supply Coverage by Zone
           </h3>
           <div className="space-y-2.5">
-            {supplies.map((s) => (
-              <div key={s.zone} className="flex items-center gap-3">
-                <div className="w-40 text-xs text-muted-foreground truncate">{s.zone}</div>
-                <div className="flex-1 h-3 rounded-full bg-background border border-border overflow-hidden">
-                  <div
-                    className={cn("h-full rounded-full transition-all", supplyBarColor(s.status))}
-                    style={{ width: `${s.coverage}%` }}
-                  />
+            {suppliesLoading ? (
+              <div className="py-4 flex justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>
+            ) : (
+              supplies?.map((s) => (
+                <div key={s.id} className="flex items-center gap-3">
+                  <div className="w-40 text-xs text-muted-foreground truncate">{s.zone}</div>
+                  <div className="flex-1 h-3 rounded-full bg-background border border-border overflow-hidden">
+                    <div
+                      className={cn("h-full rounded-full transition-all", supplyBarColor(s.status))}
+                      style={{ width: `${s.coverage}%` }}
+                    />
+                  </div>
+                  <div className="w-12 text-right text-xs font-mono tabular-nums">{s.coverage}%</div>
                 </div>
-                <div className="w-12 text-right text-xs font-mono tabular-nums">{s.coverage}%</div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>
