@@ -1,6 +1,13 @@
-import { FileBarChart, CheckCircle, Clock } from "lucide-react";
+import { FileBarChart, CheckCircle, Clock, Package } from "lucide-react";
 import { StatusBadge, statusVariant } from "@/components/StatusBadge";
-import { incidents, zoneStats } from "@/data/mock";
+import { incidents, zoneStats, supplies } from "@/data/mock";
+import { cn } from "@/lib/utils";
+
+const supplyStatusVariant = (s: string): "green" | "amber" | "red" =>
+  s === "Sufficient" ? "green" : s === "Low" ? "amber" : "red";
+
+const supplyBarColor = (s: string) =>
+  s === "Sufficient" ? "bg-success" : s === "Low" ? "bg-warning" : "bg-primary";
 
 export default function Reports() {
   const total = incidents.length;
