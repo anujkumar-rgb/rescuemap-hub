@@ -86,3 +86,58 @@ export const zoneStats = [
   { zone: "Zone D", count: 7 },
   { zone: "Zone E", count: 14 },
 ];
+
+export type ZoneRisk = "critical" | "active" | "clear";
+export const zoneRisk: Record<string, ZoneRisk> = {
+  "Zone A": "critical",
+  "Zone B": "active",
+  "Zone C": "critical",
+  "Zone D": "clear",
+  "Zone E": "active",
+};
+
+export interface FieldUpdate {
+  id: string;
+  time: string;
+  unit: string;
+  message: string;
+  kind: "urgent" | "update" | "success";
+}
+
+export const fieldUpdates: FieldUpdate[] = [
+  { id: "F-06", time: "14:32", unit: "Bravo Unit", message: "Road blocked on SV Road, taking alternate via LBS Marg", kind: "update" },
+  { id: "F-05", time: "14:28", unit: "Delta Force", message: "Reached Zone C, 14 survivors found", kind: "success" },
+  { id: "F-04", time: "14:21", unit: "Eagle Team", message: "Medical supplies running low, requesting refill", kind: "urgent" },
+  { id: "F-03", time: "14:15", unit: "Alpha Squad", message: "Evacuation underway in Dharavi Sector 4, 32 civilians moved", kind: "update" },
+  { id: "F-02", time: "14:08", unit: "Falcon Squad", message: "Boat deployed at Borivali Creek, two children rescued", kind: "success" },
+  { id: "F-01", time: "13:55", unit: "Griffin Unit", message: "Fuel critical on V-206, returning to depot immediately", kind: "urgent" },
+];
+
+export interface SupplyRow {
+  zone: string;
+  food: number;
+  water: number;
+  medical: number;
+  blankets: number;
+  status: "Sufficient" | "Low" | "Critical";
+  coverage: number;
+}
+
+export const supplies: SupplyRow[] = [
+  { zone: "Zone A (Dharavi)", food: 1200, water: 3400, medical: 85, blankets: 540, status: "Low", coverage: 58 },
+  { zone: "Zone B (Kurla)", food: 2200, water: 5100, medical: 140, blankets: 820, status: "Sufficient", coverage: 86 },
+  { zone: "Zone C (Andheri)", food: 480, water: 1100, medical: 32, blankets: 210, status: "Critical", coverage: 24 },
+  { zone: "Zone D (Thane)", food: 1900, water: 4600, medical: 110, blankets: 700, status: "Sufficient", coverage: 78 },
+  { zone: "Zone E (Borivali)", food: 980, water: 2700, medical: 64, blankets: 410, status: "Low", coverage: 49 },
+];
+
+/* For elapsed timer in incidents — minutes since "now" the incident started */
+export const incidentElapsedStart: Record<string, number> = {
+  "INC-1043": 12,
+  "INC-1042": 27,
+  "INC-1041": 44,
+  "INC-1040": 60,
+  "INC-1039": 73,
+  "INC-1038": 122,
+  "INC-1037": 184,
+};
