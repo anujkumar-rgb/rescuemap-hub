@@ -20,9 +20,9 @@ To restrict access to the RescueTrack system, follow these steps:
      created_at timestamp DEFAULT now()
    );
 
-   -- Replace these with real emails for your team
+   -- Add your authorized team emails here
    INSERT INTO allowed_users (email, full_name, role) VALUES
-   ('admin@rescuetrack.com', 'Admin User', 'admin'),
+   ('anujkumarjha@gmaill.com', 'Anuj Kumar Jha', 'admin'),
    ('operator1@rescuetrack.com', 'Operator One', 'operator'),
    ('operator2@rescuetrack.com', 'Operator Two', 'operator');
 
