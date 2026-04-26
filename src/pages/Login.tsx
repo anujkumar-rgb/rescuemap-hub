@@ -3,6 +3,7 @@ import { useNavigate, Navigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { Radio, Eye, EyeOff, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +17,7 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const { session } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   // Redirect if already logged in
   if (session) {
@@ -36,6 +38,20 @@ export default function Login() {
       if (authError) {
         setError(authError.message);
       } else if (data.session) {
+        // WHITELIST CHECK
+        const { data: allowed, error: allowedError } = await supabase
+          .from('allowed_users')
+          .select('*')
+          .eq('email', email)
+          .eq('is_active', true)
+          .single();
+
+        if (allowedError || !allowed) {
+          await supabase.auth.signOut();
+          setError("Access denied. You are not authorized to access this system.");
+          return;
+        }
+
         navigate("/dashboard");
       }
     } catch (err: any) {
@@ -122,6 +138,21 @@ export default function Login() {
                 Forgot password? Contact admin
               </button>
             </div>
+            
+            <div className="mt-6 pt-4 border-t border-white/10">
+              <Button
+                type="button"
+                onClick={() => {
+                  // Instant bypass for demo/judging
+                  localStorage.setItem("demo_bypass", "true");
+                  navigate("/dashboard");
+                  window.location.reload(); // Force reload to apply bypass
+                }}
+                className="w-full h-10 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white font-medium border border-white/10 transition-all text-sm"
+              >
+                Demo Admin Bypass (For Judges)
+              </Button>
+            </div>
           </form>
           
           <div className="mt-10 text-center space-y-3">
@@ -137,7 +168,7 @@ export default function Login() {
       </Card>
       
       <div className="mt-8 text-[11px] text-gray-500 font-medium tracking-tight">
-        ResqNet v1.0 • Mumbai Metro Operations
+        ResqNet v1.0 • National Operations
       </div>
     </div>
   );

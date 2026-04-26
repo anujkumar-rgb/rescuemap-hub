@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Search, MapPin, Phone, Users as UsersIcon, Loader2 } from "lucide-react";
 import { StatusBadge, statusVariant } from "@/components/StatusBadge";
 import { useTeamsQuery, useVehiclesQuery } from "@/hooks/useQueries";
+import { useTranslation } from "react-i18next";
 
 const zones = ["All Zones", "Zone A (Dharavi)", "Zone B (Kurla)", "Zone C (Andheri)", "Zone D (Thane)", "Zone E (Borivali)"];
 const statuses = ["All Status", "On Site", "En Route", "Returning", "Standby"];
@@ -10,6 +11,7 @@ export default function Teams() {
   const [q, setQ] = useState("");
   const [zone, setZone] = useState(zones[0]);
   const [status, setStatus] = useState(statuses[0]);
+  const { t } = useTranslation();
 
   const { data: teams, isLoading: teamsLoading } = useTeamsQuery();
   const { data: vehicles, isLoading: vehiclesLoading } = useVehiclesQuery();
@@ -66,31 +68,31 @@ export default function Teams() {
           </div>
         ) : (
           <>
-            {filtered.map((t) => (
+            {filtered.map((team) => (
               <div
-                key={t.id}
+                key={team.id}
                 className="rounded-lg border border-border bg-card p-5 shadow-card hover:border-primary/40 hover:-translate-y-0.5 transition-all"
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">{t.id}</div>
-                    <h3 className="text-lg font-bold mt-0.5">{t.name}</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">Led by {t.leader}</p>
+                    <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">{team.id}</div>
+                    <h3 className="text-lg font-bold mt-0.5">{t(team.name)}</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">Led by {team.leader}</p>
                   </div>
-                  <StatusBadge variant={statusVariant(t.status)}>{t.status}</StatusBadge>
+                  <StatusBadge variant={statusVariant(team.status)}>{t(team.status)}</StatusBadge>
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <UsersIcon className="h-4 w-4" />
-                    <span><span className="text-foreground font-medium">{t.members}</span> members</span>
+                    <span><span className="text-foreground font-medium">{team.members}</span> members</span>
                   </div>
                   <div className="text-muted-foreground">
-                    <span className="text-foreground font-medium">{t.vehicle}</span>
+                    <span className="text-foreground font-medium">{team.vehicle}</span>
                   </div>
                   <div className="col-span-2 flex items-center gap-2 text-muted-foreground">
                     <MapPin className="h-4 w-4" />
-                    <span>{t.zone}</span>
+                    <span>{team.zone}</span>
                   </div>
                 </div>
 
@@ -158,7 +160,7 @@ export default function Teams() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <StatusBadge variant={statusVariant(v.status)}>{v.status}</StatusBadge>
+                        <StatusBadge variant={statusVariant(v.status)}>{t(v.status)}</StatusBadge>
                       </td>
                     </tr>
                   );

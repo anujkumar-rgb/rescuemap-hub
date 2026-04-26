@@ -1,0 +1,18 @@
+{
+  "translation": {
+    "Operations Dashboard": "संचालन डैशबोर्ड",
+    "Active Teams": "सक्रिय टीमें",
+    "Vehicles Deployed": "तैनात वाहन",
+    "Incidents Open": "खुली घटनाएं",
+    "Areas Covered": "कवर किए गए क्षेत्र",
+    "Live Field Map": "लाइव फील्ड मैप",
+    "Live Team Status": "लाइव टीम स्थिति",
+    "Recent Incidents": "हालिया घटनाएं",
+    "Sign In": "साइन इन करें",
+    "Sign Out": "साइन आउट",
+    "On Site": "साइट पर",
+    "En Route": "रास्ते में",
+    "Returning": "वापस आ रहे हैं",
+    "Standby": "स्टैंडबाय"
+  }
+}

@@ -1,6 +1,7 @@
 export type TeamStatus = "En Route" | "On Site" | "Returning" | "Standby";
 export type IncidentStatus = "Open" | "In Progress" | "Resolved";
 export type AlertSeverity = "critical" | "warning" | "info";
+export type VolunteerStatus = "Available" | "Assigned" | "Off Duty";
 
 export interface Team {
   id: string;
@@ -141,3 +142,42 @@ export const incidentElapsedStart: Record<string, number> = {
   "INC-1038": 122,
   "INC-1037": 184,
 };
+
+export interface Volunteer {
+  id: string;
+  name: string;
+  phone: string;
+  city: string;
+  skills: string[];
+  availability: string;
+  status: VolunteerStatus;
+  created_at?: string;
+}
+
+export const volunteers: Volunteer[] = [
+  { id: "V-001", name: "Priya Sharma", phone: "9876543210", city: "Mumbai", skills: ["First Aid", "Medical"], availability: "Immediate", status: "Available" },
+  { id: "V-002", name: "Rahul Deshmukh", phone: "9123456789", city: "Pune", skills: ["Driving", "Search & Rescue"], availability: "Within 24hrs", status: "Assigned" },
+  { id: "V-003", name: "Anita Kumar", phone: "9898989898", city: "Thane", skills: ["Swimming", "First Aid"], availability: "Immediate", status: "Available" },
+  { id: "V-004", name: "Vikram Singh", phone: "9777777777", city: "Navi Mumbai", skills: ["Construction", "Driving"], availability: "Weekend only", status: "Off Duty" },
+  { id: "V-005", name: "Meera Patel", phone: "9666666666", city: "Mumbai", skills: ["Medical"], availability: "Immediate", status: "Assigned" },
+];
+
+export interface Drone {
+  id: string;
+  city: string;
+  coords: [number, number];
+  mission: string;
+  battery: number;
+  altitude: string;
+  status: string;
+  timestamp: string;
+}
+
+export const drones: Drone[] = [
+  { id: "Drone-1", city: "Mumbai", coords: [19.0860, 72.8977], mission: "Aerial Survey", battery: 78, altitude: "120m", status: "Active", timestamp: new Date().toISOString() },
+  { id: "Drone-2", city: "Chennai", coords: [13.0927, 80.2807], mission: "Search & Rescue", battery: 45, altitude: "150m", status: "Active", timestamp: new Date().toISOString() },
+  { id: "Drone-3", city: "Kolkata", coords: [22.5826, 88.3739], mission: "Damage Assessment", battery: 12, altitude: "80m", status: "Returning to base", timestamp: new Date().toISOString() },
+  { id: "Drone-4", city: "Guwahati", coords: [26.1545, 91.7462], mission: "Flood Mapping", battery: 92, altitude: "200m", status: "Active", timestamp: new Date().toISOString() },
+  { id: "Drone-5", city: "Dehradun", coords: [30.3265, 78.0422], mission: "Landslide Survey", battery: 100, altitude: "0m", status: "Charging", timestamp: new Date().toISOString() },
+  { id: "Drone-6", city: "Bhopal", coords: [23.2699, 77.4226], mission: "Relief Drop", battery: 65, altitude: "100m", status: "Active", timestamp: new Date().toISOString() },
+];

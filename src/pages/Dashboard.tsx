@@ -1,6 +1,7 @@
 import { Users, Truck, AlertTriangle, MapPin, Loader2 } from "lucide-react";
-import { MapPlaceholder } from "@/components/MapPlaceholder";
+import { IndiaMap } from "@/components/IndiaMap";
 import { StatusBadge, statusVariant } from "@/components/StatusBadge";
+import { useTranslation } from "react-i18next";
 import { SeverityBadge, severityFromStatus } from "@/components/SeverityBadge";
 import { Sparkline } from "@/components/Sparkline";
 import { WeatherCard } from "@/components/WeatherCard";
@@ -10,7 +11,6 @@ import { incidentElapsedStart } from "@/data/mock";
 import { useState } from "react";
 import { useTeamsQuery, useIncidentsQuery } from "@/hooks/useQueries";
 import { useAuth } from "@/hooks/useAuth";
-
 const stats = [
   {
     label: "Active Teams",
@@ -55,13 +55,14 @@ export default function Dashboard() {
   const { data: teams, isLoading: teamsLoading } = useTeamsQuery();
   const { data: incidents, isLoading: incidentsLoading } = useIncidentsQuery();
   const { session } = useAuth();
+  const { t } = useTranslation();
 
   console.log("Supabase Session:", session);
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Operations Dashboard</h1>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t("Operations Dashboard")}</h1>
         <p className="text-sm text-muted-foreground mt-1">Real-time overview of all active rescue operations</p>
       </div>
 
@@ -74,7 +75,7 @@ export default function Dashboard() {
           >
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-xs uppercase tracking-wider text-muted-foreground">{s.label}</div>
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">{t(s.label)}</div>
                 <div className="mt-1 text-3xl font-bold">{s.value}</div>
               </div>
               <div className={`flex h-11 w-11 items-center justify-center rounded-lg ${s.bg} ${s.accent}`}>
@@ -91,7 +92,7 @@ export default function Dashboard() {
         <div className="lg:col-span-2">
           <div className="mb-2 flex flex-col md:flex-row md:items-center justify-between gap-2">
             <div className="flex items-center gap-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Live Field Map</h2>
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{t("Live Field Map")}</h2>
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span className="h-1.5 w-1.5 rounded-full bg-success pulse-blue" />
                 Updated 3s ago
@@ -99,40 +100,36 @@ export default function Dashboard() {
             </div>
             <WeatherCard />
           </div>
-          <MapPlaceholder
-            className="h-[420px] w-full"
-            onSelectTeam={setSelected}
-            selectedTeam={selected}
-          />
+          <IndiaMap height="420px" />
         </div>
 
         <div className="rounded-lg border border-border bg-card p-4 shadow-card">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Live Team Status</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("Live Team Status")}</h2>
           {teamsLoading ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
             <ul className="space-y-2">
-              {teams?.map((t) => (
+              {teams?.map((team) => (
                 <li
-                  key={t.id}
-                  onClick={() => setSelected(t.id)}
+                  key={team.id}
+                  onClick={() => setSelected(team.id)}
                   className="flex items-center justify-between rounded-md border border-border bg-background/40 p-3 cursor-pointer hover:border-primary/40 hover:bg-accent/40 transition-colors"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span
                       className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
-                        t.color === "red" ? "bg-primary" : t.color === "blue" ? "bg-info" : "bg-success"
+                        team.color === "red" ? "bg-primary" : team.color === "blue" ? "bg-info" : "bg-success"
                       }`}
                     />
                     <div className="min-w-0">
-                      <div className="text-sm font-medium truncate">{t.name}</div>
-                      <div className="text-[11px] text-muted-foreground truncate">{t.zone}</div>
+                      <div className="text-sm font-medium truncate">{team.name}</div>
+                      <div className="text-[11px] text-muted-foreground truncate">{team.zone}</div>
                     </div>
                   </div>
-                  <StatusBadge variant={statusVariant(t.status)} dot={false}>
-                    {t.status}
+                  <StatusBadge variant={statusVariant(team.status)} dot={false}>
+                    {t(team.status)}
                   </StatusBadge>
                 </li>
               ))}
@@ -145,7 +142,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 rounded-lg border border-border bg-card shadow-card">
           <div className="flex items-center justify-between p-4 border-b border-border">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Recent Incidents</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{t("Recent Incidents")}</h2>
             <span className="text-xs text-muted-foreground">Last 24 hours</span>
           </div>
           <div className="overflow-x-auto">
