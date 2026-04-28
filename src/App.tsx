@@ -1,4 +1,3 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -17,7 +16,6 @@ import SosChat from "./pages/SosChat";
 import { useEffect, useState } from "react";
 import { WifiOff, Wifi } from "lucide-react";
 
-const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth();
@@ -92,37 +90,33 @@ const NetworkBanners = () => {
 };
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <NetworkBanners />
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/sos" element={<SosChat />} />
-            
-            <Route element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-            }>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/map" element={<LiveMap />} />
-              <Route path="/teams" element={<Teams />} />
-              <Route path="/volunteers" element={<Volunteers />} />
-              <Route path="/alerts" element={<Alerts />} />
-              <Route path="/reports" element={<Reports />} />
-            </Route>
-            
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+  <TooltipProvider>
+    <NetworkBanners />
+    <Toaster />
+    <Sonner />
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/sos" element={<SosChat />} />
+        
+        <Route element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/map" element={<LiveMap />} />
+          <Route path="/teams" element={<Teams />} />
+          <Route path="/volunteers" element={<Volunteers />} />
+          <Route path="/alerts" element={<Alerts />} />
+          <Route path="/reports" element={<Reports />} />
+        </Route>
+        
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </BrowserRouter>
+  </TooltipProvider>
 );
 
 export default App;
