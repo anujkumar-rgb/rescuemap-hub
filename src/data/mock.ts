@@ -23,6 +23,10 @@ export interface Incident {
   status: IncidentStatus;
   time: string;
   responseMin: number;
+  lat: number;
+  lng: number;
+  description?: string;
+  optimized_distance?: number;
 }
 
 export interface Vehicle {
@@ -32,6 +36,9 @@ export interface Vehicle {
   location: string;
   fuel: number;
   status: "Active" | "Idle" | "Maintenance";
+  lat: number;
+  lng: number;
+  assignedIncidentId?: string;
 }
 
 export interface AlertItem {
@@ -53,22 +60,22 @@ export const teams: Team[] = [
 ];
 
 export const incidents: Incident[] = [
-  { id: "INC-1043", location: "Dharavi - Sector 4", type: "Flood", team: "Alpha Squad", status: "In Progress", time: "12 min ago", responseMin: 8 },
-  { id: "INC-1042", location: "Andheri West", type: "Building Collapse", team: "Delta Force", status: "Open", time: "27 min ago", responseMin: 11 },
-  { id: "INC-1041", location: "Kurla East", type: "Medical Emergency", team: "Bravo Unit", status: "In Progress", time: "44 min ago", responseMin: 6 },
-  { id: "INC-1040", location: "Thane Junction", type: "Road Block", team: "Eagle Team", status: "Resolved", time: "1 hr ago", responseMin: 14 },
-  { id: "INC-1039", location: "Borivali Creek", type: "Flood", team: "Falcon Squad", status: "In Progress", time: "1 hr ago", responseMin: 9 },
-  { id: "INC-1038", location: "Andheri MIDC", type: "Fire", team: "Delta Force", status: "Resolved", time: "2 hrs ago", responseMin: 7 },
-  { id: "INC-1037", location: "Kurla Depot", type: "Fire", team: "Griffin Unit", status: "Resolved", time: "3 hrs ago", responseMin: 12 },
+  { id: "INC-1043", location: "Dharavi - Sector 4", type: "Flood", team: "Alpha Squad", status: "In Progress", time: "12 min ago", responseMin: 8, lat: 19.0380, lng: 72.8538, description: "Heavy flooding in Sector 4. Multiple households stranded.", optimized_distance: 0.8 },
+  { id: "INC-1042", location: "Andheri West", type: "Building Collapse", team: "Delta Force", status: "Open", time: "27 min ago", responseMin: 11, lat: 19.1136, lng: 72.8697, description: "Partial collapse of a residential building. 3 people feared trapped.", optimized_distance: 4.2 },
+  { id: "INC-1041", location: "Kurla East", type: "Medical Emergency", team: "Bravo Unit", status: "In Progress", time: "44 min ago", responseMin: 6, lat: 19.0726, lng: 72.8744, description: "Multiple cases of waterborne diseases reported.", optimized_distance: 1.5 },
+  { id: "INC-1040", location: "Thane Junction", type: "Road Block", team: "Eagle Team", status: "Resolved", time: "1 hr ago", responseMin: 14, lat: 19.2183, lng: 72.9781, description: "Major tree fall blocking traffic at the junction.", optimized_distance: 7.8 },
+  { id: "INC-1039", location: "Borivali Creek", type: "Flood", team: "Falcon Squad", status: "In Progress", time: "1 hr ago", responseMin: 9, lat: 19.2307, lng: 72.8567, description: "Creek water overflowing into nearby slums.", optimized_distance: 5.4 },
+  { id: "INC-1038", location: "Andheri MIDC", type: "Fire", team: "Delta Force", status: "Resolved", time: "2 hrs ago", responseMin: 7, lat: 19.1196, lng: 72.8897, description: "Short circuit fire in a small industrial unit.", optimized_distance: 2.1 },
+  { id: "INC-1037", location: "Kurla Depot", type: "Fire", team: "Griffin Unit", status: "Resolved", time: "3 hrs ago", responseMin: 12, lat: 19.0626, lng: 72.8844, description: "Refuse fire near the bus depot.", optimized_distance: 3.9 },
 ];
 
 export const vehicles: Vehicle[] = [
-  { id: "V-201", type: "Ambulance", driver: "R. Singh", location: "Kurla East", fuel: 78, status: "Active" },
-  { id: "V-202", type: "Fire Truck", driver: "K. Patil", location: "Andheri MIDC", fuel: 42, status: "Active" },
-  { id: "V-203", type: "Rescue Van", driver: "J. Desai", location: "Dharavi Sec 4", fuel: 91, status: "Active" },
-  { id: "V-204", type: "Boat", driver: "S. Pillai", location: "Borivali Creek", fuel: 55, status: "Active" },
-  { id: "V-205", type: "Helicopter", driver: "Capt. N. Joshi", location: "Thane Helipad", fuel: 23, status: "Idle" },
-  { id: "V-206", type: "Ambulance", driver: "M. Shah", location: "Kurla Depot", fuel: 8, status: "Maintenance" },
+  { id: "V-201", type: "Ambulance", driver: "R. Singh", location: "Kurla East", fuel: 78, status: "Active", lat: 19.0726, lng: 72.8744, assignedIncidentId: "INC-1041" },
+  { id: "V-202", type: "Fire Truck", driver: "K. Patil", location: "Andheri MIDC", fuel: 42, status: "Active", lat: 19.1196, lng: 72.8897 },
+  { id: "V-203", type: "Rescue Van", driver: "J. Desai", location: "Dharavi Sec 4", fuel: 91, status: "Active", lat: 19.0380, lng: 72.8538, assignedIncidentId: "INC-1043" },
+  { id: "V-204", type: "Boat", driver: "S. Pillai", location: "Borivali Creek", fuel: 55, status: "Active", lat: 19.2307, lng: 72.8567, assignedIncidentId: "INC-1039" },
+  { id: "V-205", type: "Helicopter", driver: "Capt. N. Joshi", location: "Thane Helipad", fuel: 23, status: "Idle", lat: 19.2183, lng: 72.9781 },
+  { id: "V-206", type: "Ambulance", driver: "M. Shah", location: "Kurla Depot", fuel: 8, status: "Maintenance", lat: 19.0626, lng: 72.8844 },
 ];
 
 export const alerts: AlertItem[] = [

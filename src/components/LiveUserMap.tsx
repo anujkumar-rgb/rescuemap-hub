@@ -18,7 +18,8 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-import { drones, Drone } from "@/data/mock";
+import { Drone } from "@/data/mock";
+import { useDronesQuery, useRiskPointsQuery } from "@/hooks/useQueries";
 
 const droneIcon = L.divIcon({
   className: "bg-transparent",
@@ -47,31 +48,13 @@ const userIcon = L.divIcon({
   iconAnchor: [12, 12],
 });
 
-const heatData: [number, number, number][] = [
-  // High risk (intensity 1.0)
-  [19.0760, 72.8777, 1.0], // Mumbai
-  [13.0827, 80.2707, 1.0], // Chennai
-  [22.5726, 88.3639, 1.0], // Kolkata
-  [26.1445, 91.7362, 1.0], // Guwahati
-  [20.2961, 85.8245, 1.0], // Bhubaneswar
-
-  // Medium risk (intensity 0.6)
-  [17.3850, 78.4867, 0.6], // Hyderabad
-  [25.5941, 85.1376, 0.6], // Patna
-  [30.3165, 78.0322, 0.6], // Dehradun
-  [24.8170, 93.9368, 0.6], // Imphal
-
-  // Low risk (intensity 0.3)
-  [26.9124, 75.7873, 0.3], // Jaipur
-  [12.9716, 77.5946, 0.3], // Bengaluru
-  [23.2599, 77.4126, 0.3], // Bhopal
-];
 
 function HeatmapOverlay({ show }: { show: boolean }) {
   const map = useMap();
+  const { data: heatData } = useRiskPointsQuery();
   
   useEffect(() => {
-    if (!show) return;
+    if (!show || !heatData) return;
     
     // @ts-ignore - leaflet.heat adds L.heatLayer
     const heatLayer = L.heatLayer(heatData, {
@@ -84,7 +67,7 @@ function HeatmapOverlay({ show }: { show: boolean }) {
     return () => {
       map.removeLayer(heatLayer);
     };
-  }, [map, show]);
+  }, [map, show, heatData]);
 
   return null;
 }
@@ -150,6 +133,7 @@ export function LiveUserMap({
 }) {
   const [position, setPosition] = useState<L.LatLng | null>(null);
   const [mapRef, setMapRef] = useState<L.Map | null>(null);
+  const { data: drones } = useDronesQuery();
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [showDrones, setShowDrones] = useState(true);
 
@@ -184,7 +168,7 @@ export function LiveUserMap({
           <Polyline positions={altRouteCoordinates} color="#10b981" weight={5} opacity={0.8} dashArray="10, 10" />
         )}
 
-        {showDrones && drones.map((d: Drone) => (
+        {showDrones && drones?.map((d: Drone) => (
           <Marker key={d.id} position={d.coords} icon={droneIcon}>
             <Popup className="dark-popup font-sans">
               <div className="flex flex-col gap-1 w-48">

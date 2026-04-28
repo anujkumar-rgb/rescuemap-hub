@@ -26,7 +26,6 @@ export default function Layout() {
   const { user, signOut } = useAuth();
   const [role, setRole] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
 
   useEffect(() => {
     if (user?.email) {
@@ -41,12 +40,6 @@ export default function Layout() {
       fetchRole();
     }
   }, [user]);
-
-  const toggleLanguage = () => {
-    const currentLang = i18n.resolvedLanguage || i18n.language || "en";
-    const nextLang = currentLang.startsWith("en") ? "hi" : "en";
-    i18n.changeLanguage(nextLang);
-  };
 
   // PWA Install
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -98,7 +91,7 @@ export default function Layout() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground font-sans">
       {sosActive && <SosBanner onDismiss={() => setSosActive(false)} />}
 
       <header className="sticky top-0 z-40 border-b border-border bg-card/80 backdrop-blur-md">
@@ -129,16 +122,12 @@ export default function Layout() {
                 }
               >
                 <l.icon className="h-4 w-4" />
-                {t(l.label)}
+                {l.label}
               </NavLink>
             ))}
           </nav>
 
           <div className="hidden md:flex items-center gap-3">
-            <Button onClick={toggleLanguage} variant="outline" size="sm" className="h-8 px-2 font-bold bg-card text-xs">
-              {(i18n.resolvedLanguage || i18n.language || "en").startsWith('en') ? 'EN' : 'HI'}
-            </Button>
-            
             {deferredPrompt && (
               <Button onClick={handleInstallClick} variant="outline" size="sm" className="h-8 gap-2 border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground">
                 <Download className="h-4 w-4" />
@@ -173,7 +162,7 @@ export default function Layout() {
               className="h-8 gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all ml-1"
             >
               <LogOut className="h-4 w-4" />
-              <span className="hidden lg:inline">{t("Sign Out")}</span>
+              <span className="hidden lg:inline">Sign Out</span>
             </Button>
           </div>
 

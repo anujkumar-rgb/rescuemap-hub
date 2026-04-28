@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { Search, Plus, MapPin, Users as UsersIcon, Truck, AlertTriangle, Route as RouteIcon, Navigation, Cloud, Thermometer, Wind, Crosshair } from "lucide-react";
+import { useLocation } from "react-router-dom";
+import { Search, Plus, MapPin, Users, Truck, AlertTriangle, Route as RouteIcon, Navigation, Cloud, Thermometer, Wind, Crosshair } from "lucide-react";
 import { LiveUserMap } from "@/components/LiveUserMap";
 import { StatusBadge, statusVariant } from "@/components/StatusBadge";
-import { useTeamsQuery } from "@/hooks/useQueries";
+import { useTeamsQuery, useIncidentsQuery, useVehiclesQuery, useDronesQuery } from "@/hooks/useQueries";
 import { cn } from "@/lib/utils";
-import { drones } from "@/data/mock";
 // @ts-ignore
 import Openrouteservice from 'openrouteservice-js';
 
@@ -12,7 +12,7 @@ type Filter = "all" | "teams" | "vehicles" | "incidents";
 
 const filters: { id: Filter; label: string; icon: any }[] = [
   { id: "all", label: "All", icon: MapPin },
-  { id: "teams", label: "Rescue Teams", icon: UsersIcon },
+  { id: "teams", label: "Rescue Teams", icon: Users },
   { id: "vehicles", label: "Vehicles", icon: Truck },
   { id: "incidents", label: "Incidents", icon: AlertTriangle },
 ];
@@ -28,12 +28,23 @@ const zoneCoords: Record<string, [number, number]> = {
 const floodZones = ["Zone A (Dharavi)", "Zone C (Andheri)"];
 
 export default function LiveMap() {
+  const location = useLocation();
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const { data: teams } = useTeamsQuery();
+  const { data: incidents } = useIncidentsQuery();
+  const { data: vehicles } = useVehiclesQuery();
+  const { data: drones } = useDronesQuery();
   
   // Route Optimizer State
   const [selectedTeamId, setSelectedTeamId] = useState<string>("");
+  
+  // Set default team if none selected
+  useEffect(() => {
+    if (!selectedTeamId && teams && teams.length > 0) {
+      setSelectedTeamId(teams[0].id);
+    }
+  }, [teams, selectedTeamId]);
   const [targetZone, setTargetZone] = useState<string>("Zone B (Kurla)");
   const [apiKey, setApiKey] = useState<string>("");
   const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
@@ -41,6 +52,26 @@ export default function LiveMap() {
   const [routeInfo, setRouteInfo] = useState<{ dist: number, time: number, isFlood: boolean } | null>(null);
   const [isLoadingRoute, setIsLoadingRoute] = useState(false);
   const [weather, setWeather] = useState<any>(null);
+
+  // Handle incoming state from Dashboard
+  useEffect(() => {
+    if (location.state?.incidentId && location.state?.vehicleId) {
+      const vehicle = vehicles?.find(v => v.id === location.state.vehicleId);
+      const incident = incidents?.find(i => i.id === location.state.incidentId);
+      
+      if (vehicle) {
+        // Find team associated with this vehicle or just use vehicle as start
+        const team = teams?.find(t => t.vehicle === vehicle.type);
+        if (team) setSelectedTeamId(team.id);
+      }
+      
+      if (incident) {
+        // For simplicity, we'll map incident location to the nearest Zone if needed, 
+        // or just use incident coordinates directly if calculateRoute is updated.
+        setTargetZone(incident.location);
+      }
+    }
+  }, [location.state, vehicles, incidents, teams]);
 
   useEffect(() => {
     // Fetch live weather from Open-Meteo for Mumbai
@@ -55,48 +86,109 @@ export default function LiveMap() {
   const selectedTeam = teams?.find(t => t.id === selectedTeamId) || teams?.[0];
 
   const calculateRoute = async () => {
-    if (!selectedTeam || !apiKey) return;
+    const isDemo = localStorage.getItem("demo_bypass") === "true";
+    
+    // Find coordinates
+    let startCoord: [number, number] | undefined;
+    let endCoord: [number, number] | undefined;
+
+    if (isDemo) {
+      const team = teams?.find(t => t.id === selectedTeamId);
+      const incident = incidents?.find(i => i.location === targetZone || i.id === location.state?.incidentId);
+      
+      if (team) {
+        // In our mock data, teams have zone-based coords
+        startCoord = zoneCoords[team.zone] || zoneCoords["Zone A (Dharavi)"];
+      }
+      if (incident) {
+        endCoord = [incident.lat, incident.lng];
+      } else {
+        endCoord = zoneCoords[targetZone];
+      }
+    }
+
+    if (!startCoord || !endCoord) return;
+    if (!apiKey && !isDemo) {
+      alert("Please enter an OpenRouteService API Key or use Demo Mode.");
+      return;
+    }
+
     setIsLoadingRoute(true);
     setRouteCoords([]);
     setAltRouteCoords([]);
     setRouteInfo(null);
 
     try {
-      const startCoord = zoneCoords[selectedTeam.zone] || zoneCoords["Zone A (Dharavi)"];
-      const endCoord = zoneCoords[targetZone];
-
-      // openrouteservice expects [longitude, latitude]
-      const Directions = new Openrouteservice.Directions({ api_key: apiKey });
-      
-      const response = await Directions.calculate({
-        coordinates: [[startCoord[1], startCoord[0]], [endCoord[1], endCoord[0]]],
-        profile: 'driving-car',
-        format: 'geojson'
-      });
-
-      if (response.features && response.features.length > 0) {
-        const feature = response.features[0];
-        // geojson has [lng, lat], react-leaflet Polyline needs [lat, lng]
-        const coords = feature.geometry.coordinates.map((c: any) => [c[1], c[0]] as [number, number]);
-        const distKm = (feature.properties.summary.distance / 1000).toFixed(1);
-        const timeMin = Math.round(feature.properties.summary.duration / 60);
+      if (isDemo) {
+        // Simulate route for demo mode if no API key
+        // Just a straight line with some noise or actual ORS if key exists
+        if (apiKey) {
+          const Directions = new Openrouteservice.Directions({ api_key: apiKey });
+          const response = await Directions.calculate({
+            coordinates: [[startCoord[1], startCoord[0]], [endCoord[1], endCoord[0]]],
+            profile: 'driving-car',
+            format: 'geojson'
+          });
+          if (response.features && response.features.length > 0) {
+            const feature = response.features[0];
+            const coords = feature.geometry.coordinates.map((c: any) => [c[1], c[0]] as [number, number]);
+            setRouteCoords(coords);
+            setRouteInfo({ 
+              dist: Number((feature.properties.summary.distance / 1000).toFixed(1)), 
+              time: Math.round(feature.properties.summary.duration / 60), 
+              isFlood: floodZones.includes(targetZone) 
+            });
+            return;
+          }
+        }
         
-        const isFlood = floodZones.includes(targetZone) || floodZones.includes(selectedTeam.zone);
+        // Fallback simulation
+        const dist = Math.sqrt(Math.pow(startCoord[0] - endCoord[0], 2) + Math.pow(startCoord[1] - endCoord[1], 2)) * 111;
+        setRouteCoords([startCoord, endCoord]);
+        setRouteInfo({ dist: Number(dist.toFixed(1)), time: Math.round(dist * 2), isFlood: floodZones.includes(targetZone) });
         
-        setRouteCoords(coords);
-        setRouteInfo({ dist: Number(distKm), time: timeMin, isFlood });
-
-        // If flood zone, create a dummy alternate route by shifting coordinates slightly
-        if (isFlood) {
-          const altCoords = coords.map((c: any) => [c[0] + 0.01, c[1] + 0.01] as [number, number]);
-          setAltRouteCoords(altCoords);
+        // If flood zone, create an alternate route
+        if (floodZones.includes(targetZone)) {
+          setAltRouteCoords([[startCoord[0] + 0.005, startCoord[1] + 0.005], [endCoord[0] + 0.005, endCoord[1] + 0.005]]);
         }
       }
     } catch (err) {
       console.error("Error calculating route:", err);
-      alert("Failed to calculate route. Check API Key or coordinates.");
     } finally {
       setIsLoadingRoute(false);
+    }
+  };
+
+  const assignRoute = async () => {
+    if (!routeInfo || !selectedTeam) return;
+    
+    const incidentId = location.state?.incidentId;
+    if (!incidentId) {
+      alert("Please select an incident from the Dashboard first to assign a route.");
+      return;
+    }
+
+    const isDemo = localStorage.getItem("demo_bypass") === "true";
+    if (isDemo) {
+      alert(`Route assigned! ${routeInfo.dist} km distance recorded for ${incidentId}.`);
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('incidents')
+        .update({
+          optimized_distance: routeInfo.dist,
+          eta: routeInfo.time,
+          status: 'In Progress'
+        })
+        .eq('id', incidentId);
+
+      if (error) throw error;
+      alert("Route successfully assigned and saved to database.");
+    } catch (err) {
+      console.error("Error assigning route:", err);
+      alert("Failed to save assignment.");
     }
   };
 
@@ -131,7 +223,7 @@ export default function LiveMap() {
           ))}
           <div className="flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-500 border border-emerald-500/30 ml-2">
             <Crosshair className="h-3.5 w-3.5" />
-            Drones Active: {drones.length}
+            Drones Active: {drones?.length || 0}
           </div>
         </div>
         <button className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 shadow-glow-red transition-opacity">
@@ -191,7 +283,10 @@ export default function LiveMap() {
                 </div>
               )}
               
-              <button className="rounded-md bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground shadow-glow-red hover:bg-primary/90 transition-colors">
+              <button 
+                onClick={assignRoute}
+                className="rounded-md bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground shadow-glow-red hover:bg-primary/90 transition-colors"
+              >
                 Assign This Route
               </button>
             </div>
@@ -207,7 +302,7 @@ export default function LiveMap() {
               <h3 className="text-lg font-bold">Drone Control</h3>
             </div>
             <div className="space-y-3">
-              {drones.map(d => {
+              {drones?.map(d => {
                 const color = d.battery > 50 ? 'bg-emerald-500' : d.battery > 20 ? 'bg-amber-500' : 'bg-red-500';
                 return (
                   <div key={d.id} className="rounded border border-border bg-background p-2.5">
@@ -275,7 +370,7 @@ export default function LiveMap() {
 
               <button 
                 onClick={calculateRoute}
-                disabled={isLoadingRoute || !apiKey}
+                disabled={isLoadingRoute || (!apiKey && localStorage.getItem("demo_bypass") !== "true")}
                 className="w-full rounded-md bg-blue-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex justify-center items-center gap-2"
               >
                 {isLoadingRoute ? (

@@ -1,21 +1,23 @@
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import LanguageDetector from 'i18next-browser-languagedetector';
-import enTranslations from './locales/en.json';
-import hiTranslations from './locales/hi.json';
+import i18n from "i18next";
+import { initReactI18next } from "react-i18next";
+import LanguageDetector from "i18next-browser-languagedetector";
 
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    resources: {
-      en: enTranslations,
-      hi: hiTranslations
-    },
-    fallbackLng: 'en',
+    fallbackLng: "en",
+    debug: false,
     interpolation: {
-      escapeValue: false, // react already safes from xss
-    }
+      escapeValue: false,
+    },
+    resources: {
+      en: {
+        translation: {
+          // Add default translations if needed
+        },
+      },
+    },
   });
 
 export default i18n;

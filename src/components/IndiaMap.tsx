@@ -28,11 +28,11 @@ const createColoredIcon = (color: string, isActive: boolean) => {
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="28" height="40">
       <defs>
-        <filter id="shadow" x="-20%" y="-10%" width="140%" height="130%">
-          <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="rgba(0,0,0,0.4)"/>
+        <filter id="shadow-filter" x="-20%" y="-10%" width="140%" height="130%">
+          <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="black" flood-opacity="0.4"/>
         </filter>
       </defs>
-      <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" fill="${fill}" filter="url(#shadow)" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+      <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" fill="${fill}" filter="url(#shadow-filter)" stroke="white" stroke-opacity="0.3" stroke-width="0.5"/>
       <circle cx="12" cy="11" r="5" fill="white" opacity="0.9"/>
       <circle cx="12" cy="11" r="3" fill="${fill}"/>
     </svg>`;

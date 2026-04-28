@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { Radio, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";

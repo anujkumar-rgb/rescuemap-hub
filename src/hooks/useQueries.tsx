@@ -108,3 +108,48 @@ export const useVolunteersQuery = () => {
     },
   });
 };
+export const useDronesQuery = () => {
+  return useQuery({
+    queryKey: ["drones"],
+    queryFn: async () => {
+      if (isDemo()) return mockData.drones;
+      const { data, error } = await supabase
+        .from("drones")
+        .select("*")
+        .order("id", { ascending: true });
+      if (error) throw error;
+      return data.map((d: any) => ({
+        ...d,
+        coords: [d.latitude, d.longitude] as [number, number]
+      }));
+    },
+  });
+};
+
+export const useRiskPointsQuery = () => {
+  return useQuery({
+    queryKey: ["risk_points"],
+    queryFn: async () => {
+      if (isDemo()) return [
+        [19.0760, 72.8777, 1.0],
+        [13.0827, 80.2707, 1.0],
+        [22.5726, 88.3639, 1.0],
+        [26.1445, 91.7362, 1.0],
+        [20.2961, 85.8245, 1.0],
+        [17.3850, 78.4867, 0.6],
+        [25.5941, 85.1376, 0.6],
+        [30.3165, 78.0322, 0.6],
+        [24.8170, 93.9368, 0.6],
+        [26.9124, 75.7873, 0.3],
+        [12.9716, 77.5946, 0.3],
+        [23.2599, 77.4126, 0.3],
+      ] as [number, number, number][];
+      
+      const { data, error } = await supabase
+        .from("risk_points")
+        .select("*");
+      if (error) throw error;
+      return data.map((p: any) => [p.latitude, p.longitude, p.intensity] as [number, number, number]);
+    },
+  });
+};
