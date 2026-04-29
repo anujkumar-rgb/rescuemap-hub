@@ -1,8 +1,9 @@
-import { FileBarChart, CheckCircle, Clock, Package, Loader2, X, MapPin, Navigation, Users, Shield, Zap, Info } from "lucide-react";
-import { useState } from "react";
+import { FileBarChart, CheckCircle, Clock, Package, Loader2, X, MapPin, Navigation, Users, Shield, Zap, Info, Search, Filter, Download, AlertTriangle, Flame, Droplets, Truck, Activity } from "lucide-react";
+import { useState, useMemo } from "react";
 import { StatusBadge, statusVariant } from "@/components/StatusBadge";
 import { useIncidentsQuery, useSuppliesQuery } from "@/hooks/useQueries";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/supabase";
 
 const supplyStatusVariant = (s: string): "green" | "amber" | "red" =>
   s === "Sufficient" ? "green" : s === "Low" ? "amber" : "red";
@@ -10,20 +11,76 @@ const supplyStatusVariant = (s: string): "green" | "amber" | "red" =>
 const supplyBarColor = (s: string) =>
   s === "Sufficient" ? "bg-success" : s === "Low" ? "bg-warning" : "bg-primary";
 
+const getResponseMin = (i: any): number => i.response_min ?? i.responseMin ?? 0;
+
+const typeIcon = (type: string) => {
+  switch (type.toLowerCase()) {
+    case 'flood': return Droplets;
+    case 'fire': return Flame;
+    case 'building collapse': return AlertTriangle;
+    case 'road block': return Truck;
+    default: return Activity;
+  }
+};
+
+const typeColor = (type: string) => {
+  switch (type.toLowerCase()) {
+    case 'flood': return 'text-blue-400 bg-blue-400/10';
+    case 'fire': return 'text-orange-400 bg-orange-400/10';
+    case 'building collapse': return 'text-red-400 bg-red-400/10';
+    case 'road block': return 'text-yellow-400 bg-yellow-400/10';
+    default: return 'text-purple-400 bg-purple-400/10';
+  }
+};
+
+const generateOpsLog = (incident: any) => {
+  const resp = getResponseMin(incident);
+  const logs = [
+    { time: 'T+0m', msg: `Emergency signal received: ${incident.type} at ${incident.location}` },
+    { time: `T+${Math.max(1, Math.round(resp * 0.2))}m`, msg: `${incident.team} dispatched from base` },
+    { time: `T+${Math.max(2, Math.round(resp * 0.6))}m`, msg: `Unit en route — ETA ${Math.round(resp * 0.4)} min` },
+    { time: `T+${resp}m`, msg: `${incident.team} arrived at ${incident.location}` },
+  ];
+  if (incident.status === 'Resolved') {
+    logs.push({ time: `T+${resp + Math.round(resp * 0.8)}m`, msg: 'All-clear confirmed. Incident marked Resolved.' });
+  } else if (incident.status === 'In Progress') {
+    logs.push({ time: `T+${resp + 2}m`, msg: 'Operations underway. Awaiting status update from field.' });
+  }
+  return logs;
+};
+
 export default function Reports() {
-  const { data: incidents, isLoading: incidentsLoading } = useIncidentsQuery();
+  const { data: incidents, isLoading: incidentsLoading, refetch: refetchIncidents } = useIncidentsQuery();
   const { data: supplies, isLoading: suppliesLoading } = useSuppliesQuery();
   const [viewingReport, setViewingReport] = useState<any>(null);
   const [isViewingDetails, setIsViewingDetails] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("All");
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const handleViewReport = (incident: any) => {
     setViewingReport(incident);
     setIsViewingDetails(true);
   };
 
+  // Filtered incidents
+  const filteredIncidents = useMemo(() => {
+    if (!incidents) return [];
+    return incidents.filter((i: any) => {
+      const matchesSearch = searchQuery === "" ||
+        i.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        i.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        i.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        i.team.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === "All" || i.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [incidents, searchQuery, statusFilter]);
+
   const total = incidents?.length || 0;
-  const resolved = incidents?.filter((i) => i.status === "Resolved").length || 0;
-  const avg = total > 0 ? Math.round(incidents!.reduce((a, b) => a + (b.response_min || 0), 0) / total) : 0;
+  const resolved = incidents?.filter((i: any) => i.status === "Resolved").length || 0;
+  const inProgress = incidents?.filter((i: any) => i.status === "In Progress").length || 0;
+  const avg = total > 0 ? Math.round(incidents!.reduce((a: number, b: any) => a + getResponseMin(b), 0) / total) : 0;
 
   // Derive zone stats from incidents
   const zoneCounts: Record<string, number> = {};
@@ -40,11 +97,95 @@ export default function Reports() {
     { label: "Avg Response Time", value: `${avg} min`, icon: Clock, accent: "text-info", bg: "bg-info/10" },
   ];
 
+  const handleUpdateStatus = async (incident: any, newStatus: string) => {
+    setUpdatingStatus(true);
+    try {
+      const isDemo = localStorage.getItem("demo_bypass") === "true";
+      if (!isDemo) {
+        const { error } = await supabase.from('incidents').update({ status: newStatus }).eq('id', incident.id);
+        if (error) throw error;
+      }
+      // Update local state
+      setViewingReport({ ...incident, status: newStatus });
+      refetchIncidents();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const handleExportPDF = () => {
+    const printContent = document.getElementById('report-detail-content');
+    if (!printContent) return;
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(`
+      <html><head><title>ResqNet - Incident Report ${viewingReport?.id}</title>
+      <style>body{font-family:system-ui,sans-serif;background:#0F172A;color:#e2e8f0;padding:40px}
+      h1{color:#fff;font-size:24px}h2{color:#94a3b8;font-size:14px;text-transform:uppercase;letter-spacing:2px}
+      .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
+      .card{background:#1e293b;padding:16px;border-radius:8px;border:1px solid #334155}
+      .label{color:#64748b;font-size:12px;text-transform:uppercase}.value{color:#fff;font-weight:bold;font-size:16px;margin-top:4px}
+      .status{display:inline-block;padding:4px 12px;border-radius:99px;font-size:11px;font-weight:bold}
+      .resolved{background:#065f46;color:#34d399}.open{background:#7f1d1d;color:#fca5a5}.progress{background:#78350f;color:#fcd34d}
+      .log{background:#0f172a;border:1px solid #1e293b;padding:12px;border-radius:8px;margin:4px 0;font-size:13px}
+      .footer{margin-top:32px;text-align:center;color:#475569;font-size:11px}
+      </style></head><body>
+      <h2>ResqNet Disaster Relief Operations</h2>
+      <h1>Incident Report: ${viewingReport?.id}</h1>
+      <p>Generated: ${new Date().toLocaleString()}</p>
+      <p class="status ${viewingReport?.status === 'Resolved' ? 'resolved' : viewingReport?.status === 'In Progress' ? 'progress' : 'open'}">${viewingReport?.status}</p>
+      <div class="grid">
+        <div class="card"><div class="label">Type</div><div class="value">${viewingReport?.type}</div></div>
+        <div class="card"><div class="label">Location</div><div class="value">${viewingReport?.location}</div></div>
+        <div class="card"><div class="label">Responding Team</div><div class="value">${viewingReport?.team}</div></div>
+        <div class="card"><div class="label">Response Time</div><div class="value">${getResponseMin(viewingReport)} min</div></div>
+        <div class="card"><div class="label">Optimized Distance</div><div class="value">${viewingReport?.optimized_distance || 'N/A'} km</div></div>
+        <div class="card"><div class="label">Description</div><div class="value">${viewingReport?.description || 'No description available'}</div></div>
+      </div>
+      <h2 style="margin-top:24px">Operational Timeline</h2>
+      ${generateOpsLog(viewingReport).map(l => `<div class="log"><strong>${l.time}</strong> — ${l.msg}</div>`).join('')}
+      <div class="footer">This report was auto-generated by ResqNet Command Center • Confidential</div>
+      </body></html>
+    `);
+    win.document.close();
+    setTimeout(() => { win.print(); }, 500);
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Incident Reports</h1>
-        <p className="text-sm text-muted-foreground mt-1">Performance metrics and incident history</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Incident Reports</h1>
+          <p className="text-sm text-muted-foreground mt-1">Performance metrics and incident history</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search incidents..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 pr-4 py-2 text-sm bg-[#1E293B] border border-white/10 rounded-lg text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-primary/50 w-56"
+            />
+          </div>
+          <div className="flex items-center gap-1 bg-[#1E293B] border border-white/10 rounded-lg p-0.5">
+            {['All', 'Open', 'In Progress', 'Resolved'].map(s => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={cn(
+                  'px-3 py-1.5 text-xs font-bold rounded-md transition-all',
+                  statusFilter === s ? 'bg-primary text-white shadow-glow-red' : 'text-muted-foreground hover:text-white'
+                )}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -93,26 +234,44 @@ export default function Reports() {
                     </td>
                   </tr>
                 ) : (
-                  incidents?.map((i) => (
-                    <tr key={i.id} className="border-b border-border/60 hover:bg-accent/30 transition-colors">
-                      <td className="px-4 py-3 font-mono text-xs text-primary">{i.id}</td>
-                      <td className="px-4 py-3">{i.type}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{i.location}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{i.team}</td>
-                      <td className="px-4 py-3 tabular-nums">{i.response_min} min</td>
-                      <td className="px-4 py-3">
-                        <StatusBadge variant={statusVariant(i.status)}>{i.status}</StatusBadge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <button 
-                          onClick={() => handleViewReport(i)}
-                          className="rounded-md border border-border bg-background px-3 py-1 text-xs font-semibold hover:border-primary/40 hover:text-primary transition-colors"
-                        >
-                          View
-                        </button>
+                  filteredIncidents.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
+                        <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        No incidents match your filter.
                       </td>
                     </tr>
-                  ))
+                  ) : (
+                    filteredIncidents.map((i: any) => {
+                      const TypeIcon = typeIcon(i.type);
+                      const colorClass = typeColor(i.type);
+                      return (
+                        <tr key={i.id} className="border-b border-border/60 hover:bg-accent/30 transition-colors">
+                          <td className="px-4 py-3 font-mono text-xs text-primary">{i.id}</td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-bold ${colorClass}`}>
+                              <TypeIcon className="h-3 w-3" />
+                              {i.type}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">{i.location}</td>
+                          <td className="px-4 py-3 text-muted-foreground">{i.team}</td>
+                          <td className="px-4 py-3 tabular-nums">{getResponseMin(i)} min</td>
+                          <td className="px-4 py-3">
+                            <StatusBadge variant={statusVariant(i.status)}>{i.status}</StatusBadge>
+                          </td>
+                          <td className="px-4 py-3">
+                            <button 
+                              onClick={() => handleViewReport(i)}
+                              className="rounded-md border border-border bg-background px-3 py-1 text-xs font-semibold hover:border-primary/40 hover:text-primary transition-colors"
+                            >
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )
                 )}
               </tbody>
             </table>
@@ -272,8 +431,14 @@ export default function Reports() {
                       </div>
                       <div className="flex justify-between p-2.5 rounded-lg bg-white/5 border border-white/5">
                         <span className="text-muted-foreground">Response Duration</span>
-                        <span className="font-bold text-emerald-500">{viewingReport.response_min} min</span>
+                        <span className="font-bold text-emerald-500">{getResponseMin(viewingReport)} min</span>
                       </div>
+                      {viewingReport.description && (
+                        <div className="p-2.5 rounded-lg bg-white/5 border border-white/5">
+                          <span className="text-muted-foreground text-xs block mb-1">Description</span>
+                          <span className="text-white text-sm">{viewingReport.description}</span>
+                        </div>
+                      )}
                     </div>
                   </section>
 
@@ -300,15 +465,9 @@ export default function Reports() {
                       <Shield className="h-3 w-3 text-warning" /> Operational Log
                     </h4>
                     <div className="h-[210px] rounded-lg bg-black/40 border border-white/5 p-4 overflow-y-auto space-y-4 custom-scrollbar">
-                      {[
-                        { time: 'T+0m', msg: 'Emergency signal captured via Satellite' },
-                        { time: 'T+2m', msg: 'Alpha Squad dispatched from Zone A' },
-                        { time: 'T+8m', msg: 'Personnel arrived at Ground Zero' },
-                        { time: 'T+15m', msg: 'Primary evacuation complete' },
-                        { time: 'T+22m', msg: 'Incident marked as Resolved' },
-                      ].map((log, idx) => (
+                      {generateOpsLog(viewingReport).map((log, idx, arr) => (
                         <div key={idx} className="flex gap-3 text-[11px] relative">
-                          {idx !== 4 && <div className="absolute left-[13px] top-4 bottom-[-16px] w-[1px] bg-white/10" />}
+                          {idx !== arr.length - 1 && <div className="absolute left-[13px] top-4 bottom-[-16px] w-[1px] bg-white/10" />}
                           <div className="h-7 w-7 rounded-full bg-white/5 border border-white/10 flex items-center justify-center font-mono text-[9px] text-primary shrink-0 z-10">
                             {log.time}
                           </div>
@@ -342,9 +501,36 @@ export default function Reports() {
                 </div>
               </section>
 
-              <div className="mt-8 flex gap-3">
-                <button className="flex-1 py-3 rounded-lg bg-primary font-bold text-sm text-white shadow-glow-red hover:bg-primary/90 transition-all flex items-center justify-center gap-2 uppercase tracking-widest">
-                  <FileBarChart className="h-4 w-4" /> Export Detailed PDF
+              {/* Status Update Actions */}
+              <div className="mt-6 p-4 rounded-lg bg-white/5 border border-white/10">
+                <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+                  <Users className="h-3 w-3 text-info" /> Update Incident Status
+                </h4>
+                <div className="flex gap-2">
+                  {['Open', 'In Progress', 'Resolved'].map(s => (
+                    <button
+                      key={s}
+                      disabled={updatingStatus || viewingReport.status === s}
+                      onClick={() => handleUpdateStatus(viewingReport, s)}
+                      className={cn(
+                        'flex-1 py-2 rounded-md text-xs font-bold transition-all border',
+                        viewingReport.status === s
+                          ? 'bg-primary/20 border-primary text-primary cursor-default'
+                          : 'border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-white'
+                      )}
+                    >
+                      {updatingStatus ? <Loader2 className="h-3 w-3 animate-spin mx-auto" /> : s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-4 flex gap-3">
+                <button 
+                  onClick={handleExportPDF}
+                  className="flex-1 py-3 rounded-lg bg-primary font-bold text-sm text-white shadow-glow-red hover:bg-primary/90 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"
+                >
+                  <Download className="h-4 w-4" /> Export Detailed PDF
                 </button>
                 <button 
                   onClick={() => setIsViewingDetails(false)}

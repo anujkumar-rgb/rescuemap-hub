@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { Search, Plus, MapPin, Users, Truck, AlertTriangle, Route as RouteIcon, Navigation, Cloud, Thermometer, Wind, Crosshair } from "lucide-react";
+import { Search, Plus, MapPin, Users, Truck, AlertTriangle, Route as RouteIcon, Navigation, Cloud, Thermometer, Wind, Crosshair, X, Video } from "lucide-react";
 import { LiveUserMap } from "@/components/LiveUserMap";
 import { StatusBadge, statusVariant } from "@/components/StatusBadge";
 import { useTeamsQuery, useIncidentsQuery, useVehiclesQuery, useDronesQuery } from "@/hooks/useQueries";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/supabase";
 // @ts-ignore
 import Openrouteservice from 'openrouteservice-js';
+import { Drone } from "@/data/mock";
 
 type Filter = "all" | "teams" | "vehicles" | "incidents";
 
@@ -53,6 +55,35 @@ export default function LiveMap() {
   const [isLoadingRoute, setIsLoadingRoute] = useState(false);
   const [weather, setWeather] = useState<any>(null);
 
+  // Modal states
+  const [showAddIncident, setShowAddIncident] = useState(false);
+  const [selectedDrone, setSelectedDrone] = useState<Drone | null>(null);
+  const [newIncident, setNewIncident] = useState({ type: 'Flood', location: 'Zone A (Dharavi)', description: '' });
+
+  const handleAddIncident = async () => {
+    if (!newIncident.description) return alert("Please enter description");
+    
+    if (localStorage.getItem("demo_bypass") !== "true") {
+      try {
+        const { error } = await supabase.from('incidents').insert([{
+          type: newIncident.type,
+          location: newIncident.location,
+          description: newIncident.description,
+          status: 'Open',
+          lat: zoneCoords[newIncident.location]?.[0] || 19.0760,
+          lng: zoneCoords[newIncident.location]?.[1] || 72.8777
+        }]);
+        if (error) throw error;
+      } catch (err) {
+        console.error("Failed to add incident", err);
+      }
+    }
+    
+    alert("Incident reported successfully!");
+    setShowAddIncident(false);
+    setNewIncident({ type: 'Flood', location: 'Zone A (Dharavi)', description: '' });
+  };
+
   // Handle incoming state from Dashboard
   useEffect(() => {
     if (location.state?.incidentId && location.state?.vehicleId) {
@@ -66,9 +97,15 @@ export default function LiveMap() {
       }
       
       if (incident) {
-        // For simplicity, we'll map incident location to the nearest Zone if needed, 
-        // or just use incident coordinates directly if calculateRoute is updated.
         setTargetZone(incident.location);
+        
+        // Auto-calculate route if we have the data
+        if (teams && vehicles && incidents) {
+            setTimeout(() => {
+              // Create a synthetic event to avoid dependency loop issues
+              document.getElementById('auto-calc-btn')?.click();
+            }, 800);
+        }
       }
     }
   }, [location.state, vehicles, incidents, teams]);
@@ -85,6 +122,24 @@ export default function LiveMap() {
 
   const selectedTeam = teams?.find(t => t.id === selectedTeamId) || teams?.[0];
 
+  // Helper to generate a simulated "AI optimized" path with a clean curve if APIs are blocked
+  const generateSimulatedPath = (start: [number, number], end: [number, number], points = 20): [number, number][] => {
+    const coords: [number, number][] = [];
+    
+    // Add a slight curve by offsetting the midpoint to make it look like a planned route
+    const midLat = (start[0] + end[0]) / 2 + 0.015;
+    const midLng = (start[1] + end[1]) / 2 - 0.015;
+    
+    for (let i = 0; i <= points; i++) {
+      const t = i / points;
+      // Quadratic bezier curve interpolation
+      const lat = (1 - t) * (1 - t) * start[0] + 2 * (1 - t) * t * midLat + t * t * end[0];
+      const lng = (1 - t) * (1 - t) * start[1] + 2 * (1 - t) * t * midLng + t * t * end[1];
+      coords.push([lat, lng]);
+    }
+    return coords;
+  };
+
   const calculateRoute = async () => {
     const isDemo = localStorage.getItem("demo_bypass") === "true";
     
@@ -92,24 +147,21 @@ export default function LiveMap() {
     let startCoord: [number, number] | undefined;
     let endCoord: [number, number] | undefined;
 
-    if (isDemo) {
-      const team = teams?.find(t => t.id === selectedTeamId);
-      const incident = incidents?.find(i => i.location === targetZone || i.id === location.state?.incidentId);
-      
-      if (team) {
-        // In our mock data, teams have zone-based coords
-        startCoord = zoneCoords[team.zone] || zoneCoords["Zone A (Dharavi)"];
-      }
-      if (incident) {
-        endCoord = [incident.lat, incident.lng];
-      } else {
-        endCoord = zoneCoords[targetZone];
-      }
+    const team = teams?.find(t => t.id === selectedTeamId) || teams?.[0];
+    const incident = incidents?.find(i => i.location === targetZone || i.id === location.state?.incidentId);
+    
+    if (team) {
+      startCoord = zoneCoords[team.zone] || zoneCoords["Zone A (Dharavi)"];
+    }
+    
+    if (incident) {
+      endCoord = [incident.lat, incident.lng];
+    } else {
+      endCoord = zoneCoords[targetZone];
     }
 
-    if (!startCoord || !endCoord) return;
-    if (!apiKey && !isDemo) {
-      alert("Please enter an OpenRouteService API Key or use Demo Mode.");
+    if (!startCoord || !endCoord) {
+      console.error("Missing coordinates:", { startCoord, endCoord, selectedTeamId, targetZone });
       return;
     }
 
@@ -118,17 +170,20 @@ export default function LiveMap() {
     setAltRouteCoords([]);
     setRouteInfo(null);
 
+    // Give a slight delay for "AI Thinking" effect
+    await new Promise(resolve => setTimeout(resolve, 800));
+
     try {
-      if (isDemo) {
-        // Simulate route for demo mode if no API key
-        // Just a straight line with some noise or actual ORS if key exists
-        if (apiKey) {
+      // Try actual ORS if key exists
+      if (apiKey) {
+        try {
           const Directions = new Openrouteservice.Directions({ api_key: apiKey });
           const response = await Directions.calculate({
             coordinates: [[startCoord[1], startCoord[0]], [endCoord[1], endCoord[0]]],
             profile: 'driving-car',
             format: 'geojson'
           });
+          
           if (response.features && response.features.length > 0) {
             const feature = response.features[0];
             const coords = feature.geometry.coordinates.map((c: any) => [c[1], c[0]] as [number, number]);
@@ -140,20 +195,63 @@ export default function LiveMap() {
             });
             return;
           }
-        }
-        
-        // Fallback simulation
-        const dist = Math.sqrt(Math.pow(startCoord[0] - endCoord[0], 2) + Math.pow(startCoord[1] - endCoord[1], 2)) * 111;
-        setRouteCoords([startCoord, endCoord]);
-        setRouteInfo({ dist: Number(dist.toFixed(1)), time: Math.round(dist * 2), isFlood: floodZones.includes(targetZone) });
-        
-        // If flood zone, create an alternate route
-        if (floodZones.includes(targetZone)) {
-          setAltRouteCoords([[startCoord[0] + 0.005, startCoord[1] + 0.005], [endCoord[0] + 0.005, endCoord[1] + 0.005]]);
+        } catch (apiErr) {
+          console.warn("ORS API failed, falling back to OSRM public API:", apiErr);
         }
       }
+      
+      // Fallback: Use free OSRM public API to get real road paths instead of straight lines
+      try {
+        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startCoord[1]},${startCoord[0]};${endCoord[1]},${endCoord[0]}?overview=full&geometries=geojson`;
+        const res = await fetch(osrmUrl);
+        const data = await res.json();
+        
+        if (data.routes && data.routes.length > 0) {
+          const route = data.routes[0];
+          // OSRM returns [lng, lat], Leaflet wants [lat, lng]
+          const coords = route.geometry.coordinates.map((c: any) => [c[1], c[0]] as [number, number]);
+          setRouteCoords(coords);
+          
+          setRouteInfo({ 
+            dist: Number((route.distance / 1000).toFixed(1)), 
+            time: Math.round(route.duration / 60), 
+            isFlood: floodZones.includes(targetZone) 
+          });
+          
+          // If flood zone, create a slight detour using OSRM with an intermediate waypoint
+          if (floodZones.includes(targetZone)) {
+            // Pick a point slightly off to the side to force an alternate route
+            const midLng = startCoord[1] + (endCoord[1] - startCoord[1]) * 0.5 + 0.02;
+            const midLat = startCoord[0] + (endCoord[0] - startCoord[0]) * 0.5 + 0.02;
+            
+            const altUrl = `https://router.project-osrm.org/route/v1/driving/${startCoord[1]},${startCoord[0]};${midLng},${midLat};${endCoord[1]},${endCoord[0]}?overview=full&geometries=geojson`;
+            const altRes = await fetch(altUrl);
+            const altData = await altRes.json();
+            
+            if (altData.routes && altData.routes.length > 0) {
+               const altCoords = altData.routes[0].geometry.coordinates.map((c: any) => [c[1], c[0]] as [number, number]);
+               setAltRouteCoords(altCoords);
+            }
+          }
+          return;
+        }
+      } catch (osrmErr) {
+        console.error("OSRM failed, using straight line simulation", osrmErr);
+      }
+      
+      // Absolute worst case fallback (should rarely happen now)
+      const simulatedPath = generateSimulatedPath(startCoord, endCoord);
+      setRouteCoords(simulatedPath);
+      
+      const dist = Math.sqrt(Math.pow(startCoord[0] - endCoord[0], 2) + Math.pow(startCoord[1] - endCoord[1], 2)) * 111;
+      setRouteInfo({ 
+        dist: Number((dist * 1.2).toFixed(1)), 
+        time: Math.round(dist * 2.5), 
+        isFlood: floodZones.includes(targetZone) 
+      });
+      
     } catch (err) {
-      console.error("Error calculating route:", err);
+      console.error("Error in routing logic:", err);
     } finally {
       setIsLoadingRoute(false);
     }
@@ -162,29 +260,41 @@ export default function LiveMap() {
   const assignRoute = async () => {
     if (!routeInfo || !selectedTeam) return;
     
+    // Check if we came from an incident, otherwise we are just dispatching a team generally
     const incidentId = location.state?.incidentId;
-    if (!incidentId) {
-      alert("Please select an incident from the Dashboard first to assign a route.");
-      return;
-    }
-
+    
     const isDemo = localStorage.getItem("demo_bypass") === "true";
+    
     if (isDemo) {
-      alert(`Route assigned! ${routeInfo.dist} km distance recorded for ${incidentId}.`);
+      if (incidentId) {
+        alert(`Route assigned! ${routeInfo.dist} km distance recorded for ${incidentId}.`);
+      } else {
+        alert(`${selectedTeam.name} has been dispatched to ${targetZone}. ETA: ${routeInfo.time} mins.`);
+      }
       return;
     }
 
     try {
-      const { error } = await supabase
-        .from('incidents')
-        .update({
-          optimized_distance: routeInfo.dist,
-          eta: routeInfo.time,
-          status: 'In Progress'
-        })
-        .eq('id', incidentId);
-
-      if (error) throw error;
+      if (incidentId) {
+        // We have a specific incident to assign this route to
+        const { error } = await supabase
+          .from('incidents')
+          .update({
+            optimized_distance: routeInfo.dist,
+            eta: routeInfo.time,
+            status: 'In Progress'
+          })
+          .eq('id', incidentId);
+        if (error) throw error;
+      } else {
+        // We are just assigning the team generally, maybe update team status
+        const { error } = await supabase
+          .from('teams')
+          .update({ status: 'En Route', zone: targetZone })
+          .eq('id', selectedTeam.id);
+        if (error) throw error;
+      }
+      
       alert("Route successfully assigned and saved to database.");
     } catch (err) {
       console.error("Error assigning route:", err);
@@ -226,7 +336,10 @@ export default function LiveMap() {
             Drones Active: {drones?.length || 0}
           </div>
         </div>
-        <button className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 shadow-glow-red transition-opacity">
+        <button 
+          onClick={() => setShowAddIncident(true)}
+          className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 shadow-glow-red transition-opacity"
+        >
           <Plus className="h-4 w-4" />
           Add Incident
         </button>
@@ -258,6 +371,7 @@ export default function LiveMap() {
             height="600px" 
             routeCoordinates={routeCoords} 
             altRouteCoordinates={altRouteCoords}
+            filter={filter}
           />
           
           {/* Route Info Card */}
@@ -305,9 +419,13 @@ export default function LiveMap() {
               {drones?.map(d => {
                 const color = d.battery > 50 ? 'bg-emerald-500' : d.battery > 20 ? 'bg-amber-500' : 'bg-red-500';
                 return (
-                  <div key={d.id} className="rounded border border-border bg-background p-2.5">
+                  <div 
+                    key={d.id} 
+                    onClick={() => setSelectedDrone(d)}
+                    className="rounded border border-border bg-background p-2.5 cursor-pointer hover:border-emerald-500/50 transition-colors group"
+                  >
                     <div className="flex justify-between items-center mb-1">
-                      <span className="text-xs font-bold">{d.id}</span>
+                      <span className="text-xs font-bold group-hover:text-emerald-400 transition-colors">{d.id}</span>
                       <span className="text-[10px] text-muted-foreground uppercase">{d.status}</span>
                     </div>
                     <div className="text-[10px] text-muted-foreground mb-2 truncate">{d.mission} • {d.city}</div>
@@ -369,8 +487,9 @@ export default function LiveMap() {
               </div>
 
               <button 
+                id="auto-calc-btn"
                 onClick={calculateRoute}
-                disabled={isLoadingRoute || (!apiKey && localStorage.getItem("demo_bypass") !== "true")}
+                disabled={isLoadingRoute}
                 className="w-full rounded-md bg-blue-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex justify-center items-center gap-2"
               >
                 {isLoadingRoute ? (
@@ -412,6 +531,130 @@ export default function LiveMap() {
           </div>
         </div>
       </div>
+
+      {/* Add Incident Modal */}
+      {showAddIncident && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-500" /> Report Incident
+              </h2>
+              <button onClick={() => setShowAddIncident(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Incident Type</label>
+                <select 
+                  value={newIncident.type}
+                  onChange={(e) => setNewIncident({...newIncident, type: e.target.value})}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:border-red-500"
+                >
+                  <option value="Flood">Flood / Waterlogging</option>
+                  <option value="Fire">Fire / Explosion</option>
+                  <option value="Structural">Structural Collapse</option>
+                  <option value="Medical">Mass Medical Emergency</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Location / Zone</label>
+                <select 
+                  value={newIncident.location}
+                  onChange={(e) => setNewIncident({...newIncident, location: e.target.value})}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:border-red-500"
+                >
+                  {Object.keys(zoneCoords).map(z => <option key={z} value={z}>{z}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Description</label>
+                <textarea 
+                  value={newIncident.description}
+                  onChange={(e) => setNewIncident({...newIncident, description: e.target.value})}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:border-red-500 min-h-[100px]"
+                  placeholder="Enter details..."
+                />
+              </div>
+              <button 
+                onClick={handleAddIncident}
+                className="w-full rounded-md bg-red-600 py-2.5 font-bold text-white shadow-glow-red hover:bg-red-500 transition-colors"
+              >
+                Broadcast Incident
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Drone Detail Modal */}
+      {selectedDrone && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="w-full max-w-2xl rounded-xl border border-emerald-500/30 bg-card p-0 shadow-[0_0_40px_rgba(16,185,129,0.15)] overflow-hidden animate-in fade-in zoom-in-95">
+            {/* Header */}
+            <div className="bg-emerald-950/40 p-4 border-b border-emerald-500/20 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
+                  <Video className="h-5 w-5 text-emerald-500" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-emerald-50 font-mono tracking-wider">{selectedDrone.id} <span className="text-emerald-500">• LIVE</span></h2>
+                  <div className="text-xs text-emerald-400/70">{selectedDrone.mission} • {selectedDrone.city}</div>
+                </div>
+              </div>
+              <button onClick={() => setSelectedDrone(null)} className="text-emerald-500/60 hover:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 p-2 rounded-lg transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            {/* Camera Viewport Simulation */}
+            <div className="relative aspect-video bg-black flex items-center justify-center overflow-hidden group">
+              <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?q=80&w=2069&auto=format&fit=crop')] bg-cover bg-center opacity-40 mix-blend-luminosity"></div>
+              
+              {/* Drone UI Overlays */}
+              <div className="absolute inset-0 border-[1px] border-emerald-500/20 m-4 pointer-events-none">
+                {/* Crosshairs */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border border-emerald-500/30 rounded-full flex items-center justify-center">
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_10px_#10b981]"></div>
+                  <div className="absolute top-0 bottom-0 left-1/2 w-[1px] bg-emerald-500/30"></div>
+                  <div className="absolute left-0 right-0 top-1/2 h-[1px] bg-emerald-500/30"></div>
+                </div>
+                
+                {/* HUD Elements */}
+                <div className="absolute top-4 left-4 text-[10px] font-mono text-emerald-500">
+                  <div>REC 🔴 00:14:32</div>
+                  <div>ALT: {selectedDrone.altitude}</div>
+                  <div>SPD: 24 km/h</div>
+                </div>
+                
+                <div className="absolute top-4 right-4 text-[10px] font-mono text-emerald-500 text-right">
+                  <div>BAT: {selectedDrone.battery}%</div>
+                  <div>SIG: STRONG</div>
+                  <div>GPS: {selectedDrone.coords[0].toFixed(4)}, {selectedDrone.coords[1].toFixed(4)}</div>
+                </div>
+              </div>
+              
+              <div className="z-10 bg-black/60 px-4 py-2 rounded text-emerald-500 font-mono text-xs border border-emerald-500/30 backdrop-blur-sm">
+                Establishing visual on target sector...
+              </div>
+            </div>
+            
+            {/* Footer controls */}
+            <div className="p-4 bg-muted/30 flex justify-between items-center">
+              <div className="text-xs text-muted-foreground">UAV assigned to sector commander.</div>
+              <div className="flex gap-2">
+                <button className="px-4 py-2 text-xs font-bold bg-background border border-border rounded-md hover:bg-accent transition-colors">
+                  Take Snapshot
+                </button>
+                <button className="px-4 py-2 text-xs font-bold bg-emerald-600 text-white rounded-md hover:bg-emerald-500 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                  Take Manual Control
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

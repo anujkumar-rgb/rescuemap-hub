@@ -181,10 +181,10 @@ export interface Drone {
 }
 
 export const drones: Drone[] = [
-  { id: "Drone-1", city: "Mumbai", coords: [19.0860, 72.8977], mission: "Aerial Survey", battery: 78, altitude: "120m", status: "Active", timestamp: new Date().toISOString() },
-  { id: "Drone-2", city: "Chennai", coords: [13.0927, 80.2807], mission: "Search & Rescue", battery: 45, altitude: "150m", status: "Active", timestamp: new Date().toISOString() },
-  { id: "Drone-3", city: "Kolkata", coords: [22.5826, 88.3739], mission: "Damage Assessment", battery: 12, altitude: "80m", status: "Returning to base", timestamp: new Date().toISOString() },
-  { id: "Drone-4", city: "Guwahati", coords: [26.1545, 91.7462], mission: "Flood Mapping", battery: 92, altitude: "200m", status: "Active", timestamp: new Date().toISOString() },
-  { id: "Drone-5", city: "Dehradun", coords: [30.3265, 78.0422], mission: "Landslide Survey", battery: 100, altitude: "0m", status: "Charging", timestamp: new Date().toISOString() },
-  { id: "Drone-6", city: "Bhopal", coords: [23.2699, 77.4226], mission: "Relief Drop", battery: 65, altitude: "100m", status: "Active", timestamp: new Date().toISOString() },
+  { id: "Drone-1", city: "Kurla (Zone B)", coords: [19.0860, 72.8977], mission: "Aerial Survey", battery: 78, altitude: "120m", status: "Active", timestamp: new Date().toISOString() },
+  { id: "Drone-2", city: "Powai (Zone C)", coords: [19.1200, 72.9100], mission: "Search & Rescue", battery: 45, altitude: "150m", status: "Active", timestamp: new Date().toISOString() },
+  { id: "Drone-3", city: "Juhu (Zone C)", coords: [19.1000, 72.8250], mission: "Damage Assessment", battery: 12, altitude: "80m", status: "Returning to base", timestamp: new Date().toISOString() },
+  { id: "Drone-4", city: "Goregaon (Zone E)", coords: [19.1650, 72.8500], mission: "Flood Mapping", battery: 92, altitude: "200m", status: "Active", timestamp: new Date().toISOString() },
+  { id: "Drone-5", city: "Malad (Zone E)", coords: [19.1850, 72.8400], mission: "Traffic Survey", battery: 100, altitude: "0m", status: "Charging", timestamp: new Date().toISOString() },
+  { id: "Drone-6", city: "Vikhroli (Zone D)", coords: [19.1100, 72.9300], mission: "Relief Drop", battery: 65, altitude: "100m", status: "Active", timestamp: new Date().toISOString() },
 ];

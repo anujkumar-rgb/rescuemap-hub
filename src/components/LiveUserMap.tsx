@@ -19,7 +19,15 @@ L.Icon.Default.mergeOptions({
 });
 
 import { Drone } from "@/data/mock";
-import { useDronesQuery, useRiskPointsQuery } from "@/hooks/useQueries";
+import { useDronesQuery, useRiskPointsQuery, useTeamsQuery, useIncidentsQuery, useVehiclesQuery } from "@/hooks/useQueries";
+
+const zoneCoords: Record<string, [number, number]> = {
+  "Zone A (Dharavi)": [19.0380, 72.8538],
+  "Zone B (Kurla)": [19.0726, 72.8744],
+  "Zone C (Andheri)": [19.1136, 72.8697],
+  "Zone D (Thane)": [19.2183, 72.9781],
+  "Zone E (Borivali)": [19.2307, 72.8567],
+};
 
 const droneIcon = L.divIcon({
   className: "bg-transparent",
@@ -120,20 +128,71 @@ function MapResizer() {
 }
 
 
+function RouteFocus({ coords }: { coords: [number, number][] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (coords.length >= 2) {
+      const bounds = L.latLngBounds(coords);
+      map.fitBounds(bounds, { padding: [50, 50] });
+    }
+  }, [map, coords]);
+  return null;
+}
+
+const startIcon = L.divIcon({
+  className: "bg-transparent",
+  html: `<div class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500 border-2 border-white shadow-lg text-white font-bold text-[10px]">A</div>`,
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
+});
+
+const endIcon = L.divIcon({
+  className: "bg-transparent",
+  html: `<div class="flex h-8 w-8 items-center justify-center rounded-full bg-red-500 border-2 border-white shadow-lg text-white font-bold text-[10px]">B</div>`,
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
+});
+
+const teamIcon = L.divIcon({
+  className: "bg-transparent",
+  html: `<div class="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 border-2 border-white shadow-lg text-white font-bold text-[10px]">T</div>`,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
+});
+
+const vehicleIcon = L.divIcon({
+  className: "bg-transparent",
+  html: `<div class="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 border-2 border-white shadow-lg text-white font-bold text-[10px]">V</div>`,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
+});
+
+const incidentIcon = L.divIcon({
+  className: "bg-transparent",
+  html: `<div class="flex h-6 w-6 items-center justify-center rounded-full bg-red-500 border-2 border-white shadow-lg text-white font-bold text-[10px]">!</div>`,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
+});
+
 export function LiveUserMap({ 
   className = "", 
   height = "400px",
   routeCoordinates = [],
-  altRouteCoordinates = []
+  altRouteCoordinates = [],
+  filter = "all"
 }: { 
   className?: string; 
   height?: string;
   routeCoordinates?: [number, number][];
   altRouteCoordinates?: [number, number][];
+  filter?: string;
 }) {
   const [position, setPosition] = useState<L.LatLng | null>(null);
   const [mapRef, setMapRef] = useState<L.Map | null>(null);
   const { data: drones } = useDronesQuery();
+  const { data: teams } = useTeamsQuery();
+  const { data: incidents } = useIncidentsQuery();
+  const { data: vehicles } = useVehiclesQuery();
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [showDrones, setShowDrones] = useState(true);
 
@@ -146,8 +205,8 @@ export function LiveUserMap({
   return (
     <div className={`relative w-full rounded-lg overflow-hidden border border-border shadow-card ${className}`} style={{ height }}>
       <MapContainer
-        center={[20.5937, 78.9629]}
-        zoom={5}
+        center={[19.0760, 72.8777]} // Default to Mumbai
+        zoom={12}
         style={{ height: "100%", width: "100%" }}
         zoomControl={true}
         className="z-0"
@@ -162,10 +221,24 @@ export function LiveUserMap({
         <HeatmapOverlay show={showHeatmap} />
         
         {routeCoordinates.length > 0 && (
-          <Polyline positions={routeCoordinates} color="#3b82f6" weight={5} opacity={0.8} />
+          <>
+            <RouteFocus coords={routeCoordinates} />
+            <Polyline 
+              positions={routeCoordinates} 
+              color="#3b82f6" 
+              weight={6} 
+              opacity={0.9} 
+              lineCap="round" 
+              lineJoin="round"
+            >
+              <Popup><b>Optimized AI Route</b></Popup>
+            </Polyline>
+            <Marker position={routeCoordinates[0]} icon={startIcon} />
+            <Marker position={routeCoordinates[routeCoordinates.length - 1]} icon={endIcon} />
+          </>
         )}
         {altRouteCoordinates.length > 0 && (
-          <Polyline positions={altRouteCoordinates} color="#10b981" weight={5} opacity={0.8} dashArray="10, 10" />
+          <Polyline positions={altRouteCoordinates} color="#10b981" weight={4} opacity={0.7} dashArray="12, 12" />
         )}
 
         {showDrones && drones?.map((d: Drone) => (
@@ -180,6 +253,28 @@ export function LiveUserMap({
                 <div className="text-[9px] text-muted-foreground mt-1 pt-1 border-t border-border">Live since {new Date(d.timestamp).toLocaleTimeString()}</div>
               </div>
             </Popup>
+          </Marker>
+        ))}
+
+        {(filter === "all" || filter === "teams") && teams?.map(t => {
+          const coords = zoneCoords[t.zone];
+          if (!coords) return null;
+          return (
+            <Marker key={`t-${t.id}`} position={coords} icon={teamIcon}>
+              <Popup className="dark-popup"><b>{t.name}</b><br/>{t.status} • {t.members} Members</Popup>
+            </Marker>
+          );
+        })}
+
+        {(filter === "all" || filter === "vehicles") && vehicles?.map(v => (
+          <Marker key={`v-${v.id}`} position={[v.lat, v.lng]} icon={vehicleIcon}>
+            <Popup className="dark-popup"><b>{v.id} ({v.type})</b><br/>Status: {v.status}<br/>Fuel: {v.fuel}%</Popup>
+          </Marker>
+        ))}
+
+        {(filter === "all" || filter === "incidents") && incidents?.map(i => (
+          <Marker key={`i-${i.id}`} position={[i.lat, i.lng]} icon={incidentIcon}>
+            <Popup className="dark-popup"><b>{i.type}</b><br/>{i.location}<br/>Status: {i.status}</Popup>
           </Marker>
         ))}
       </MapContainer>

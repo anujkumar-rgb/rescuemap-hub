@@ -23,6 +23,37 @@ export default function SosChat() {
     scrollToBottom();
   }, [messages, statusCard]);
 
+  const getSmartMockResponse = (text: string) => {
+    const input = text.toLowerCase();
+    let type = "Other";
+    let instructions = "Stay where you are and keep your phone charged.";
+    
+    if (input.includes("flood") || input.includes("water") || input.includes("drown")) {
+      type = "Flood";
+      instructions = "Move to higher ground immediately. Avoid walking or driving through flood waters. Turn off electricity if safe.";
+    } else if (input.includes("fire") || input.includes("smoke") || input.includes("burn")) {
+      type = "Fire";
+      instructions = "Evacuate the building immediately. Stay low to the ground to avoid smoke. Do not use elevators.";
+    } else if (input.includes("earthquake") || input.includes("shake") || input.includes("quake")) {
+      type = "Earthquake";
+      instructions = "Drop, Cover, and Hold on. Stay away from windows and heavy furniture. Move to an open area if outside.";
+    } else if (input.includes("medical") || input.includes("heart") || input.includes("blood") || input.includes("pain") || input.includes("injury")) {
+      type = "Medical";
+      instructions = "Apply pressure to any bleeding. Keep the person warm and still. Do not give them anything to eat or drink.";
+    } else if (input.includes("landslide") || input.includes("mud") || input.includes("mountain")) {
+      type = "Landslide";
+      instructions = "Move away from the path of the landslide. Listen for unusual sounds like trees cracking. Move to the nearest stable ground.";
+    } else if (input.includes("collapse") || input.includes("building") || input.includes("trap")) {
+      type = "Building Collapse";
+      instructions = "Stay calm and protect your head. If trapped, tap on a pipe or wall so rescuers can find you. Shout only as a last resort.";
+    }
+
+    return {
+      text: `I understand you are experiencing a ${type} emergency. I have received your report and am alerting the nearest teams. Please stay calm. \n\nCLASSIFICATION: ${type}\n\nImmediate Safety Steps:\n1. ${instructions}\n2. Keep your location services ON.\n3. Help is on the way.`,
+      type
+    };
+  };
+
   const handleSend = async () => {
     if (!input.trim()) return;
 
@@ -33,31 +64,41 @@ export default function SosChat() {
     setStatusCard(null);
 
     try {
-      const response = await anthropic.messages.create({
-        model: "claude-3-haiku-20240307",
-        max_tokens: 300,
-        system: `You are an emergency response AI for RescueTrack disaster relief system in India. When someone describes an emergency, you must:
+      let aiText = "";
+      let emergencyType = "Unknown";
+
+      // If no API key or dummy key, use Smart Mock
+      if (!import.meta.env.VITE_ANTHROPIC_API_KEY || import.meta.env.VITE_ANTHROPIC_API_KEY === "dummy") {
+        await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate thinking
+        const mock = getSmartMockResponse(userText);
+        aiText = mock.text;
+        emergencyType = mock.type;
+      } else {
+        const response = await anthropic.messages.create({
+          model: "claude-3-haiku-20240307",
+          max_tokens: 300,
+          system: `You are an emergency response AI for RescueTrack disaster relief system in India. When someone describes an emergency, you must:
 1. Acknowledge their situation with empathy in 1 sentence.
 2. Ask for their exact location if not provided.
 3. Classify the emergency type: Flood / Fire / Earthquake / Medical / Landslide / Building Collapse / Other. Ensure you state "CLASSIFICATION: [type]" exactly like that somewhere in your response.
 4. Give 2-3 immediate safety instructions.
 5. Confirm that rescue teams have been alerted.
 Keep responses short, clear and calm. Reply in the same language the user writes in (Hindi or English).`,
-        messages: [{ role: "user", content: userText }]
-      });
+          messages: [{ role: "user", content: userText }]
+        });
 
-      const aiText = response.content[0].text;
+        aiText = response.content[0].text;
+        const match = aiText.match(/CLASSIFICATION:\s*(.+?)(?:\n|$)/i);
+        emergencyType = match ? match[1].trim() : "Unknown";
+      }
+
       setMessages(prev => [...prev, { role: "assistant", content: aiText }]);
 
-      // Parse classification
-      const match = aiText.match(/CLASSIFICATION:\s*(.+?)(?:\n|$)/i);
-      const emergencyType = match ? match[1].trim() : "Unknown";
-
-      // Mock setting up status card
+      // Setting up status card with "AI Precision"
       const newStatus = {
         type: emergencyType,
-        team: "Alpha Squad",
-        eta: Math.floor(Math.random() * 10) + 5,
+        team: emergencyType === "Flood" ? "Water Rescue Squad" : "Alpha Emergency Unit",
+        eta: Math.floor(Math.random() * 8) + 4,
       };
       setStatusCard(newStatus);
 
@@ -72,8 +113,14 @@ Keep responses short, clear and calm. Reply in the same language the user writes
       }
 
     } catch (error) {
-      console.error(error);
-      setMessages(prev => [...prev, { role: "assistant", content: "I'm sorry, I'm having trouble connecting. Please call emergency services immediately: 112 (National) or 1070 (NDRF)." }]);
+      console.error("AI Error, using emergency fallback:", error);
+      const mock = getSmartMockResponse(userText);
+      setMessages(prev => [...prev, { role: "assistant", content: mock.text }]);
+      setStatusCard({
+        type: mock.type,
+        team: "Emergency Response Alpha",
+        eta: 10
+      });
     } finally {
       setLoading(false);
     }

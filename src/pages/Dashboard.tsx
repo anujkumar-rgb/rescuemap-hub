@@ -169,7 +169,7 @@ export default function Dashboard() {
               {teams?.map((team) => (
                 <li
                   key={team.id}
-                  onClick={() => setSelected(team.id)}
+                  onClick={() => navigate('/teams', { state: { teamId: team.id } })}
                   className="flex items-center justify-between rounded-md border border-border bg-background/40 p-3 cursor-pointer hover:border-primary/40 hover:bg-accent/40 transition-colors"
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -281,80 +281,88 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="space-y-6 animate-in slide-in-from-bottom-2 fade-in duration-300">
+                  {/* Live Feed Simulation */}
+                  <div className="relative aspect-video rounded-lg overflow-hidden border border-border bg-black group">
+                    <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1526666923127-b2970f64b422?auto=format&fit=crop&q=80&w=800')] bg-cover bg-center opacity-60 mix-blend-luminosity grayscale group-hover:grayscale-0 transition-all duration-700" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+                    
+                    {/* Camera UI Overlay */}
+                    <div className="absolute top-4 left-4 flex flex-col gap-1">
+                      <div className="flex items-center gap-2 bg-red-600 px-2 py-0.5 rounded text-[10px] font-bold animate-pulse">
+                        <span className="h-1.5 w-1.5 rounded-full bg-white" /> LIVE FEED
+                      </div>
+                      <div className="text-[10px] font-mono text-white/70">DRONE-04 / 4K ULTRA HD</div>
+                    </div>
+                    
+                    <div className="absolute top-4 right-4 flex flex-col items-end gap-1">
+                      <div className="text-[10px] font-mono text-emerald-500">ALT: 120m</div>
+                      <div className="text-[10px] font-mono text-emerald-500">SPD: 14km/h</div>
+                      <div className="text-[10px] font-mono text-emerald-500">BAT: 84%</div>
+                    </div>
+
+                    <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
+                      <div className="text-[10px] font-mono text-white/50">{viewingIncident.location} Sector 4</div>
+                      <div className="flex gap-2">
+                        <div className="h-10 w-10 rounded border border-white/20 bg-black/40 backdrop-blur-sm flex items-center justify-center">
+                          <Activity className="h-4 w-4 text-white" />
+                        </div>
+                        <div className="h-10 w-10 rounded border border-white/20 bg-black/40 backdrop-blur-sm flex items-center justify-center">
+                          <Navigation className="h-4 w-4 text-white" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-3 rounded-lg bg-background/50 border border-border/50">
-                      <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider mb-2">
-                        <Navigation className="h-3 w-3" /> Exact Location
+                      <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider mb-2 font-bold">
+                        <Navigation className="h-3 w-3 text-primary" /> Sector Coordinates
                       </div>
-                      <div className="font-semibold">{viewingIncident.location}</div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-background/50 border border-border/50">
-                      <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider mb-2">
-                        <Users className="h-3 w-3" /> Assigned Team
-                      </div>
-                      <div className="font-semibold">{viewingIncident.team}</div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-background/50 border border-border/50">
-                      <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider mb-2">
-                        <Clock className="h-3 w-3" /> Reported At
-                      </div>
-                      <div className="font-semibold">28 mins ago</div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-background/50 border border-border/50">
-                      <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider mb-2">
-                        <Truck className="h-3 w-3" /> Vehicle Distance
-                      </div>
-                      <div className="font-semibold text-primary">
-                        {viewingIncident.distance ? `${viewingIncident.distance} km away` : "Calculating..."}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground mt-1">
-                        Vehicle: {viewingIncident.vehicleId || "Assigning..."}
+                      <div className="font-mono text-sm text-white">
+                        {viewingIncident.lat?.toFixed(4) || "19.0390"}°N / {viewingIncident.lng?.toFixed(4) || "72.8619"}°E
                       </div>
                     </div>
                     <div className="p-3 rounded-lg bg-background/50 border border-border/50">
-                      <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider mb-2">
-                        <Activity className="h-3 w-3" /> Current Status
+                      <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider mb-2 font-bold">
+                        <Users className="h-3 w-3 text-info" /> Field Command
                       </div>
-                      <div className="font-semibold">{viewingIncident.status}</div>
+                      <div className="font-semibold text-white">{viewingIncident.team}</div>
                     </div>
                   </div>
 
                   <div>
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-2">
-                      Description
+                    <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+                      Operational Log
                     </h4>
-                    <p className="text-sm text-gray-300 leading-relaxed bg-background/30 p-3 rounded border border-border/30">
-                      {viewingIncident.description || "Heavy rainfall causing localized flooding. Multiple residents requesting assistance for evacuation from ground floor premises. No casualties reported so far."}
-                    </p>
-                  </div>
-
-                  <div>
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
-                      Actions Taken
-                    </h4>
-                    <div className="space-y-3">
+                    <div className="space-y-4 relative before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-border/50">
                       {[
-                        { t: "12 mins ago", m: "Assigned team Alpha Squad reached the site" },
-                        { t: "25 mins ago", m: "SOS request verified by AI Command" },
-                        { t: "28 mins ago", m: "Initial incident report logged" }
+                        { t: "12:04 PM", m: "Unit Alpha initiated ground survey", status: "success" },
+                        { t: "11:58 AM", m: "SOS request verified via multi-source logic", status: "primary" },
+                        { t: "11:55 AM", m: "Incident logged at Command Center", status: "muted" }
                       ].map((log, i) => (
-                        <div key={i} className="flex gap-3 text-sm">
-                          <span className="text-primary font-mono whitespace-nowrap">{log.t}</span>
-                          <span className="text-gray-400">{log.m}</span>
+                        <div key={i} className="flex gap-5 pl-8 relative">
+                          <div className={`absolute left-1 top-1.5 h-3 w-3 rounded-full border-2 border-background bg-${log.status === 'success' ? 'emerald-500' : log.status === 'primary' ? 'blue-500' : 'gray-600'}`} />
+                          <div className="flex-1 pb-4 border-b border-white/5 last:border-0">
+                            <div className="flex justify-between mb-1">
+                              <span className="text-[11px] font-bold text-white/90">{log.m}</span>
+                              <span className="text-[10px] font-mono text-muted-foreground">{log.t}</span>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground leading-relaxed">System recorded automatic GPS ping and status transition.</p>
+                          </div>
                         </div>
                       ))}
                     </div>
                   </div>
                   
-                  <div className="flex gap-3 pt-2">
+                  <div className="flex gap-3 pt-4 border-t border-white/10">
                     <button 
                       onClick={() => navigate('/map', { state: { incidentId: viewingIncident.id, vehicleId: viewingIncident.vehicleId } })}
-                      className="flex-1 flex items-center justify-center gap-2 rounded-md bg-secondary py-3 text-sm font-bold text-white shadow-lg hover:bg-secondary/90 transition-colors"
+                      className="flex-1 flex items-center justify-center gap-3 rounded-lg bg-blue-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-500 transition-all active:scale-95"
                     >
-                      <Navigation className="h-4 w-4" /> View Optimized Route
+                      <Navigation className="h-4 w-4" /> Deploy Strategic Route
                     </button>
-                    <button className="flex-1 rounded-md border border-border bg-background py-3 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
-                      Mark as Resolved
+                    <button className="px-6 rounded-lg border border-border bg-white/5 py-3.5 text-sm font-bold text-white hover:bg-white/10 transition-all">
+                      Archive
                     </button>
                   </div>
                 </div>

@@ -98,6 +98,8 @@ const App = () => (
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/sos" element={<SosChat />} />
+        <Route path="/sos-chat" element={<Navigate to="/sos" replace />} />
+        <Route path="/emergency" element={<Navigate to="/sos" replace />} />
         
         <Route element={
           <ProtectedRoute>

@@ -1,32 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Search, MapPin, Phone, Users, Loader2, X, Activity, Clock, Navigation } from "lucide-react";
 import { StatusBadge, statusVariant } from "@/components/StatusBadge";
 import { useTeamsQuery, useVehiclesQuery } from "@/hooks/useQueries";
 import { supabase } from "@/supabase";
-
-/*
-  SQL TO CREATE TEAMS TABLE IN SUPABASE:
-  
-  CREATE TABLE teams (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    name text NOT NULL,
-    leader text,
-    members_count int DEFAULT 0,
-    zone text,
-    status text DEFAULT 'Standby',
-    location text,
-    created_at timestamp DEFAULT now()
-  );
-
-  INSERT INTO teams (name, leader, members_count, zone, status, location)
-  VALUES
-  ('Alpha Squad', 'Rajesh Kumar', 8, 'Zone A (Dharavi)', 'On Site', 'Dharavi, Mumbai'),
-  ('Bravo Unit', 'Priya Sharma', 6, 'Zone B (Kurla)', 'En Route', 'Kurla, Mumbai'),
-  ('Delta Force', 'Amit Singh', 10, 'Zone C (Andheri)', 'On Site', 'Andheri, Mumbai'),
-  ('Eagle Team', 'Sunita Patel', 7, 'Zone D (Thane)', 'Returning', 'Thane'),
-  ('Falcon Squad', 'Vikram Mehta', 5, 'Zone E (Borivali)', 'En Route', 'Borivali'),
-  ('Griffin Unit', 'Neha Joshi', 9, 'Zone B (Kurla)', 'Standby', 'Kurla, Mumbai');
-*/
 
 const zones = ["All Zones", "Zone A (Dharavi)", "Zone B (Kurla)", "Zone C (Andheri)", "Zone D (Thane)", "Zone E (Borivali)"];
 const statuses = ["All Status", "On Site", "En Route", "Returning", "Standby"];
@@ -37,9 +14,22 @@ export default function Teams() {
   const [status, setStatus] = useState(statuses[0]);
   const [viewingTeam, setViewingTeam] = useState<any>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [localActivityLogs, setLocalActivityLogs] = useState<{t: string, m: string}[]>([]);
+  const location = useLocation();
 
   const { data: teams, isLoading: teamsLoading } = useTeamsQuery();
   const { data: vehicles, isLoading: vehiclesLoading } = useVehiclesQuery();
+
+  useEffect(() => {
+    if (location.state?.teamId && teams) {
+      const team = teams.find((t: any) => t.id === location.state.teamId || t.name === location.state.teamId);
+      if (team) {
+        handleViewDetails(team);
+        // Clear state to avoid reopening if navigated away and back
+        window.history.replaceState({}, document.title);
+      }
+    }
+  }, [location.state, teams]);
 
   const filtered = useMemo(() => {
     if (!teams) return [];
@@ -53,8 +43,12 @@ export default function Teams() {
 
   const handleViewDetails = async (team: any) => {
     setViewingTeam(team);
+    setLocalActivityLogs([
+      { t: "10 mins ago", m: "Arrived at current deployment location" },
+      { t: "45 mins ago", m: "Dispatched from regional HQ" },
+      { t: "2 hrs ago", m: "Completed pre-mission equipment check" }
+    ]);
     
-    // If in demo mode, don't try to fetch from Supabase to avoid 404s
     const isDemo = localStorage.getItem("demo_bypass") === "true";
     if (isDemo) return;
 
@@ -300,12 +294,8 @@ export default function Teams() {
                       <Activity className="h-3.5 w-3.5" /> Recent Activity Log
                     </h4>
                     <div className="space-y-3">
-                      {[
-                        { t: "10 mins ago", m: "Arrived at current deployment location" },
-                        { t: "45 mins ago", m: "Dispatched from regional HQ" },
-                        { t: "2 hrs ago", m: "Completed pre-mission equipment check" }
-                      ].map((log, i) => (
-                        <div key={i} className="flex gap-3 text-sm">
+                      {localActivityLogs.map((log, i) => (
+                        <div key={i} className="flex gap-3 text-sm animate-in slide-in-from-top-2 fade-in duration-300">
                           <span className="text-primary font-mono whitespace-nowrap">{log.t}</span>
                           <span className="text-gray-400">{log.m}</span>
                         </div>
@@ -314,10 +304,73 @@ export default function Teams() {
                   </div>
                   
                   <div className="pt-4 flex gap-3">
-                    <button className="flex-1 rounded-md bg-primary py-2.5 text-sm font-bold shadow-glow-red hover:opacity-90 transition-opacity">
+                    <button 
+                      onClick={async () => {
+                        if (!viewingTeam) return;
+                        
+                        const isDemo = localStorage.getItem("demo_bypass") === "true";
+                        if (isDemo) {
+                          setLocalActivityLogs([{ t: "Just now", m: `Backup units requested & dispatched to ${viewingTeam.zone}` }, ...localActivityLogs]);
+                          return;
+                        }
+
+                        try {
+                          // Create a high priority alert for backup
+                          const { error } = await supabase
+                            .from('alerts')
+                            .insert([{
+                              type: 'Backup Requested',
+                              message: `Immediate backup requested for ${viewingTeam.name} in ${viewingTeam.zone}`,
+                              severity: 'critical',
+                              status: 'Active',
+                              lat: 19.0760, 
+                              lng: 72.8777
+                            }]);
+                          
+                          if (error) throw error;
+                          setLocalActivityLogs([{ t: "Just now", m: `Backup units requested & dispatched to ${viewingTeam.zone}` }, ...localActivityLogs]);
+                        } catch (err) {
+                          console.error(err);
+                          alert("Failed to deploy backup.");
+                        }
+                      }}
+                      className="flex-1 rounded-md bg-primary py-2.5 text-sm font-bold shadow-glow-red hover:opacity-90 transition-opacity"
+                    >
                       Deploy Backup
                     </button>
-                    <button className="flex-1 rounded-md border border-border bg-background py-2.5 text-sm font-bold hover:bg-white/5 transition-colors">
+                    <button 
+                      onClick={async () => {
+                        if (!viewingTeam) return;
+                        
+                        const orders = prompt(`Enter new tactical orders for ${viewingTeam.name}:`, "Hold position and secure the perimeter.");
+                        if (!orders) return;
+
+                        const isDemo = localStorage.getItem("demo_bypass") === "true";
+                        
+                        if (isDemo) {
+                          setLocalActivityLogs([{ t: "Just now", m: `Orders received: "${orders}"` }, ...localActivityLogs]);
+                          return;
+                        }
+
+                        try {
+                          const { error } = await supabase.from('field_updates').insert([{
+                            id: `ORD-${Date.now()}`,
+                            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                            unit: viewingTeam.name,
+                            message: `Command assigned new orders: ${orders}`,
+                            kind: 'urgent'
+                          }]);
+                          if (error) throw error;
+                          
+                          // Also append to the visible log
+                          setLocalActivityLogs([{ t: "Just now", m: `Orders transmitted: "${orders}"` }, ...localActivityLogs]);
+                        } catch (err) {
+                          console.error(err);
+                          alert("Failed to securely transmit orders.");
+                        }
+                      }}
+                      className="flex-1 rounded-md border border-border bg-background py-2.5 text-sm font-bold hover:bg-white/5 transition-colors"
+                    >
                       Send Orders
                     </button>
                   </div>

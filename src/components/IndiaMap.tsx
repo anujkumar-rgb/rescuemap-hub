@@ -1,10 +1,9 @@
 import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Users, AlertTriangle, MapPin, Truck, Radio } from "lucide-react";
-
-// Fix default marker icons in Vite
+import { Users, AlertTriangle, MapPin, Truck, Radio, Clock } from "lucide-react";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
@@ -46,110 +45,16 @@ const createColoredIcon = (color: string, isActive: boolean) => {
   });
 };
 
-// All team markers data
+// Active Mumbai Metro Operational Zones
 const markers = [
-  // MAHARASHTRA
-  { lat: 19.0390, lng: 72.8619, team: "Alpha Squad", status: "On Site", type: "Flood Response", location: "Mumbai (Dharavi)", state: "Maharashtra", color: "red" },
-  { lat: 18.5204, lng: 73.8567, team: "Bravo Unit", status: "En Route", type: "Flood Response", location: "Pune", state: "Maharashtra", color: "blue" },
-  { lat: 19.9975, lng: 73.7898, team: "Delta Force", status: "Standby", type: "Flood Response", location: "Nashik", state: "Maharashtra", color: "green" },
-
-  // GUJARAT
-  { lat: 23.0225, lng: 72.5714, team: "Eagle Team", status: "On Site", type: "Earthquake Response", location: "Ahmedabad", state: "Gujarat", color: "red" },
-  { lat: 21.1702, lng: 72.8311, team: "Falcon Squad", status: "En Route", type: "Flood Response", location: "Surat", state: "Gujarat", color: "blue" },
-  { lat: 23.2519, lng: 69.6669, team: "Griffin Unit", status: "On Site", type: "Earthquake Response", location: "Bhuj", state: "Gujarat", color: "red" },
-
-  // RAJASTHAN
-  { lat: 26.9124, lng: 75.7873, team: "Hawk Team", status: "Standby", type: "Earthquake Response", location: "Jaipur", state: "Rajasthan", color: "green" },
-  { lat: 26.2389, lng: 73.0243, team: "Iron Squad", status: "En Route", type: "Flood Response", location: "Jodhpur", state: "Rajasthan", color: "blue" },
-
-  // UTTAR PRADESH
-  { lat: 26.8467, lng: 80.9462, team: "Jaguar Unit", status: "On Site", type: "Flood Response", location: "Lucknow", state: "Uttar Pradesh", color: "red" },
-  { lat: 25.3176, lng: 82.9739, team: "Kilo Team", status: "En Route", type: "Flood Response", location: "Varanasi", state: "Uttar Pradesh", color: "blue" },
-  { lat: 25.4358, lng: 81.8463, team: "Lima Squad", status: "Standby", type: "Flood Response", location: "Prayagraj", state: "Uttar Pradesh", color: "green" },
-
-  // BIHAR
-  { lat: 25.5941, lng: 85.1376, team: "Mike Unit", status: "On Site", type: "Flood Response", location: "Patna", state: "Bihar", color: "red" },
-  { lat: 26.1209, lng: 85.3647, team: "November Squad", status: "En Route", type: "Flood Response", location: "Muzaffarpur", state: "Bihar", color: "blue" },
-
-  // WEST BENGAL
-  { lat: 22.5726, lng: 88.3639, team: "Oscar Team", status: "On Site", type: "Cyclone Response", location: "Kolkata", state: "West Bengal", color: "red" },
-  { lat: 26.7271, lng: 88.3953, team: "Papa Unit", status: "En Route", type: "Cyclone Response", location: "Siliguri", state: "West Bengal", color: "blue" },
-
-  // ODISHA
-  { lat: 20.2961, lng: 85.8245, team: "Quebec Squad", status: "On Site", type: "Cyclone Response", location: "Bhubaneswar", state: "Odisha", color: "red" },
-  { lat: 19.8135, lng: 85.8312, team: "Romeo Unit", status: "On Site", type: "Cyclone Response", location: "Puri", state: "Odisha", color: "blue" },
-
-  // ANDHRA PRADESH
-  { lat: 17.6868, lng: 83.2185, team: "Sierra Team", status: "On Site", type: "Flood Response", location: "Visakhapatnam", state: "Andhra Pradesh", color: "red" },
-  { lat: 16.5062, lng: 80.6480, team: "Tango Squad", status: "En Route", type: "Flood Response", location: "Vijayawada", state: "Andhra Pradesh", color: "blue" },
-
-  // TAMIL NADU
-  { lat: 13.0827, lng: 80.2707, team: "Uniform Unit", status: "On Site", type: "Flood Response", location: "Chennai", state: "Tamil Nadu", color: "red" },
-  { lat: 9.9252, lng: 78.1198, team: "Victor Squad", status: "Standby", type: "Flood Response", location: "Madurai", state: "Tamil Nadu", color: "green" },
-  { lat: 11.0168, lng: 76.9558, team: "Whiskey Team", status: "En Route", type: "Flood Response", location: "Coimbatore", state: "Tamil Nadu", color: "blue" },
-
-  // KERALA
-  { lat: 8.5241, lng: 76.9366, team: "X-Ray Unit", status: "On Site", type: "Landslide Response", location: "Thiruvananthapuram", state: "Kerala", color: "red" },
-  { lat: 9.9312, lng: 76.2673, team: "Yankee Squad", status: "En Route", type: "Landslide Response", location: "Kochi", state: "Kerala", color: "blue" },
-  { lat: 11.6854, lng: 76.1320, team: "Zulu Team", status: "On Site", type: "Landslide Response", location: "Wayanad", state: "Kerala", color: "red" },
-
-  // KARNATAKA
-  { lat: 12.9716, lng: 77.5946, team: "Alpha-2 Squad", status: "Standby", type: "Flood Response", location: "Bengaluru", state: "Karnataka", color: "green" },
-  { lat: 12.2958, lng: 76.6394, team: "Bravo-2 Unit", status: "En Route", type: "Flood Response", location: "Mysuru", state: "Karnataka", color: "blue" },
-
-  // TELANGANA
-  { lat: 17.3850, lng: 78.4867, team: "Charlie-2 Team", status: "On Site", type: "Flood Response", location: "Hyderabad", state: "Telangana", color: "red" },
-
-  // MADHYA PRADESH
-  { lat: 23.2599, lng: 77.4126, team: "Delta-2 Squad", status: "En Route", type: "Flood Response", location: "Bhopal", state: "Madhya Pradesh", color: "blue" },
-  { lat: 22.7196, lng: 75.8577, team: "Echo-2 Unit", status: "Standby", type: "Flood Response", location: "Indore", state: "Madhya Pradesh", color: "green" },
-
-  // CHHATTISGARH
-  { lat: 21.2514, lng: 81.6296, team: "Foxtrot-2 Team", status: "En Route", type: "Flood Response", location: "Raipur", state: "Chhattisgarh", color: "blue" },
-
-  // JHARKHAND
-  { lat: 23.3441, lng: 85.3096, team: "Golf-2 Squad", status: "On Site", type: "Flood Response", location: "Ranchi", state: "Jharkhand", color: "red" },
-
-  // ASSAM
-  { lat: 26.1445, lng: 91.7362, team: "Hotel-2 Unit", status: "On Site", type: "Flood Response", location: "Guwahati", state: "Assam", color: "red" },
-  { lat: 24.8333, lng: 92.7789, team: "India-2 Squad", status: "En Route", type: "Flood Response", location: "Silchar", state: "Assam", color: "blue" },
-
-  // MANIPUR
-  { lat: 24.8170, lng: 93.9368, team: "Juliet-2 Team", status: "On Site", type: "Landslide Response", location: "Imphal", state: "Manipur", color: "red" },
-
-  // UTTARAKHAND
-  { lat: 30.3165, lng: 78.0322, team: "Kilo-2 Squad", status: "On Site", type: "Landslide Response", location: "Dehradun", state: "Uttarakhand", color: "red" },
-  { lat: 29.9457, lng: 78.1642, team: "Lima-2 Unit", status: "En Route", type: "Landslide Response", location: "Haridwar", state: "Uttarakhand", color: "blue" },
-
-  // HIMACHAL PRADESH
-  { lat: 31.1048, lng: 77.1734, team: "Mike-2 Team", status: "On Site", type: "Landslide Response", location: "Shimla", state: "Himachal Pradesh", color: "red" },
-  { lat: 32.2190, lng: 76.3234, team: "November-2 Squad", status: "En Route", type: "Landslide Response", location: "Dharamshala", state: "Himachal Pradesh", color: "blue" },
-
-  // JAMMU & KASHMIR
-  { lat: 34.0837, lng: 74.7973, team: "Oscar-2 Unit", status: "On Site", type: "Flood Response", location: "Srinagar", state: "Jammu & Kashmir", color: "red" },
-  { lat: 32.7266, lng: 74.8570, team: "Papa-2 Squad", status: "En Route", type: "Flood Response", location: "Jammu", state: "Jammu & Kashmir", color: "blue" },
-
-  // PUNJAB
-  { lat: 31.6340, lng: 74.8723, team: "Quebec-2 Team", status: "Standby", type: "Flood Response", location: "Amritsar", state: "Punjab", color: "green" },
-  { lat: 30.9010, lng: 75.8573, team: "Romeo-2 Unit", status: "En Route", type: "Flood Response", location: "Ludhiana", state: "Punjab", color: "blue" },
-
-  // HARYANA
-  { lat: 28.4089, lng: 77.3178, team: "Sierra-2 Squad", status: "En Route", type: "Flood Response", location: "Faridabad", state: "Haryana", color: "blue" },
-
-  // DELHI
-  { lat: 28.6139, lng: 77.2090, team: "Tango-2 Team", status: "On Site", type: "Flood Response", location: "New Delhi", state: "Delhi", color: "red" },
-
-  // ANDAMAN & NICOBAR
-  { lat: 11.6234, lng: 92.7265, team: "Uniform-2 Unit", status: "On Site", type: "Cyclone Response", location: "Port Blair", state: "Andaman & Nicobar", color: "red" },
-
-  // LAKSHADWEEP
-  { lat: 10.5669, lng: 72.6420, team: "Victor-2 Squad", status: "En Route", type: "Cyclone Response", location: "Kavaratti", state: "Lakshadweep", color: "blue" },
-
-  // NORTHEAST
-  { lat: 23.8315, lng: 91.2868, team: "Whiskey-2 Team", status: "On Site", type: "Flood Response", location: "Agartala", state: "Tripura", color: "red" },
-  { lat: 23.7307, lng: 92.7173, team: "X-Ray-2 Unit", status: "En Route", type: "Flood Response", location: "Aizawl", state: "Mizoram", color: "blue" },
-  { lat: 25.6751, lng: 94.1086, team: "Yankee-2 Squad", status: "Standby", type: "Flood Response", location: "Kohima", state: "Nagaland", color: "green" },
-  { lat: 27.3314, lng: 88.6138, team: "Zulu-2 Team", status: "On Site", type: "Landslide Response", location: "Gangtok", state: "Sikkim", color: "red" },
+  { lat: 19.0380, lng: 72.8538, team: "Alpha Squad", status: "On Site", type: "Flood Response", location: "Dharavi", state: "Zone A", color: "red" },
+  { lat: 19.0726, lng: 72.8744, team: "Bravo Unit", status: "En Route", type: "Flood Response", location: "Kurla", state: "Zone B", color: "blue" },
+  { lat: 19.1136, lng: 72.8697, team: "Delta Force", status: "On Site", type: "Medical Emergency", location: "Andheri", state: "Zone C", color: "red" },
+  { lat: 19.2183, lng: 72.9781, team: "Eagle Team", status: "Returning", type: "Structural Collapse", location: "Thane", state: "Zone D", color: "green" },
+  { lat: 19.2307, lng: 72.8567, team: "Falcon Squad", status: "En Route", type: "Flood Response", location: "Borivali", state: "Zone E", color: "blue" },
+  { lat: 19.0680, lng: 72.8800, team: "Griffin Unit", status: "Standby", type: "Rapid Deployment", location: "Kurla East", state: "Zone B", color: "green" },
+  { lat: 19.0200, lng: 72.8400, team: "Hawk Team", status: "On Site", type: "Fire Emergency", location: "Dadar", state: "Zone A", color: "red" },
+  { lat: 19.1300, lng: 72.8900, team: "Iron Squad", status: "En Route", type: "Traffic Incident", location: "Powai", state: "Zone C", color: "blue" },
 ];
 
 // Stats
@@ -189,6 +94,7 @@ interface IndiaMapProps {
 }
 
 export function IndiaMap({ className = "", height = "550px" }: IndiaMapProps) {
+  const navigate = useNavigate();
   return (
     <div className={className}>
       {/* Counter bar */}
@@ -214,8 +120,8 @@ export function IndiaMap({ className = "", height = "550px" }: IndiaMapProps) {
       {/* Map container */}
       <div className="relative rounded-lg border border-border overflow-hidden shadow-card" style={{ height }}>
         <MapContainer
-          center={[20.5937, 78.9629]}
-          zoom={5}
+          center={[19.1000, 72.8800]}
+          zoom={11}
           style={{ height: "100%", width: "100%" }}
           zoomControl={true}
           className="z-0"
@@ -233,27 +139,46 @@ export function IndiaMap({ className = "", height = "550px" }: IndiaMapProps) {
               icon={createColoredIcon(m.color, m.color === "red")}
             >
               <Popup className="dark-popup">
-                <div className="min-w-[200px] font-sans">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-lg">{typeIcon(m.type)}</span>
+                <div className="min-w-[240px] font-sans p-1">
+                  <div className="flex items-center gap-3 mb-3 pb-3 border-b border-white/10">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/5 text-xl">
+                      {typeIcon(m.type)}
+                    </div>
                     <div>
                       <div className="font-bold text-sm text-white">{m.team}</div>
-                      <div className="text-[10px] uppercase tracking-wider text-gray-400">{m.type}</div>
+                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{m.type} Unit</div>
                     </div>
                   </div>
-                  <div className="space-y-1.5">
+                  
+                  <div className="space-y-3">
                     <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Current Status</span>
                       <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${statusColor(m.status)}`}>
                         {m.status}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-xs text-gray-300">
-                      <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                      {m.location}, {m.state}
+                    
+                    <div className="flex items-start gap-2.5 text-xs text-gray-300">
+                      <MapPin className="h-3.5 w-3.5 text-primary mt-0.5" />
+                      <div>
+                        <div className="font-medium">{m.location}</div>
+                        <div className="text-[10px] text-muted-foreground">{m.state}</div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1.5 text-[10px] text-gray-500">
-                      <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      Last updated: Just now
+
+                    <div className="flex items-center gap-2.5 text-[10px] text-gray-500 bg-white/5 p-2 rounded">
+                      <Clock className="h-3 w-3" />
+                      <span>Last sync: {Math.floor(Math.random() * 5) + 1} minutes ago</span>
+                    </div>
+                    
+                    <div className="pt-2">
+                      <button 
+                        onClick={() => navigate('/teams', { state: { teamId: m.team } })}
+                        className="w-full rounded bg-primary py-2 text-[11px] font-bold text-white shadow-glow-red hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                      >
+                        <Users className="h-3 w-3" />
+                        View Deployment Details
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -268,12 +193,12 @@ export function IndiaMap({ className = "", height = "550px" }: IndiaMapProps) {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
           </span>
-          India • Live Operations
+          Mumbai Metro • Live Operations
         </div>
 
         {/* Coordinates */}
         <div className="absolute top-3 right-3 z-[1000] rounded-md bg-card/90 backdrop-blur px-3 py-1.5 text-[10px] font-mono text-muted-foreground border border-border">
-          20.59°N · 78.96°E
+          19.10°N · 72.88°E
         </div>
 
         {/* Legend */}
