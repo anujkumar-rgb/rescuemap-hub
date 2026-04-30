@@ -13,6 +13,7 @@ import Volunteers from "./pages/Volunteers";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import SosChat from "./pages/SosChat";
+import StrategySandbox from "./pages/StrategySandbox";
 import { useEffect, useState } from "react";
 import { WifiOff, Wifi } from "lucide-react";
 
@@ -113,6 +114,7 @@ const App = () => (
           <Route path="/volunteers" element={<Volunteers />} />
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/reports" element={<Reports />} />
+          <Route path="/sandbox" element={<StrategySandbox />} />
         </Route>
         
         <Route path="*" element={<NotFound />} />

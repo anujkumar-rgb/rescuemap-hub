@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { LayoutDashboard, Map, Users, Bell, FileBarChart, Radio, Menu, X, Download, Edit3 } from "lucide-react";
+import { LayoutDashboard, Map, Users, Bell, FileBarChart, Radio, Menu, X, Download, Edit3, BrainCircuit } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SosBanner } from "./SosBanner";
 import { CriticalAlertBar } from "./CriticalAlertBar";
@@ -18,6 +18,7 @@ const links = [
   { to: "/alerts", label: "Alerts", icon: Bell },
   { to: "/reports", label: "Reports", icon: FileBarChart },
   { to: "/sos", label: "Public SOS", icon: Radio },
+  { to: "/sandbox", label: "AI Sandbox", icon: BrainCircuit },
 ];
 
 export default function Layout() {
