@@ -1,4 +1,5 @@
-import { Users, Truck, AlertTriangle, MapPin, Loader2, X, Clock, Navigation, Activity } from "lucide-react";
+import { Users, Truck, AlertTriangle, MapPin, Loader2, X, Clock, Navigation, Activity, Zap, Shield, TrendingUp } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { IndiaMap } from "@/components/IndiaMap";
 import { StatusBadge, statusVariant } from "@/components/StatusBadge";
 import { SeverityBadge, severityFromStatus } from "@/components/SeverityBadge";
@@ -55,6 +56,7 @@ const stats = [
 export default function Dashboard() {
   const [selected, setSelected] = useState<string | null>(null);
   const [viewingIncident, setViewingIncident] = useState<any>(null);
+  const [selectedZone, setSelectedZone] = useState<string | null>(null);
   const [isLoadingIncident, setIsLoadingIncident] = useState(false);
   const navigate = useNavigate();
 
@@ -116,9 +118,35 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 font-sans text-white">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Operations Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-1">Real-time overview of all active rescue operations</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white flex items-center gap-3">
+            <Zap className="h-8 w-8 text-primary animate-pulse" />
+            Operations Dashboard
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">Real-time overview of all active rescue operations</p>
+        </div>
+        
+        {/* Mission Pulse Ticker */}
+        <div className="flex items-center gap-6 px-6 py-3 rounded-xl bg-background/40 border border-white/5 backdrop-blur-md">
+          <div className="flex flex-col">
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">System Health</span>
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+              <span className="text-sm font-bold text-white uppercase italic">Optimal</span>
+            </div>
+          </div>
+          <div className="h-8 w-px bg-white/10" />
+          <div className="flex flex-col">
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Personnel</span>
+            <span className="text-sm font-bold text-white tracking-tighter">142 <span className="text-[10px] text-muted-foreground">Units</span></span>
+          </div>
+          <div className="h-8 w-px bg-white/10" />
+          <div className="flex flex-col">
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Alert Level</span>
+            <span className="text-sm font-bold text-rose-500 tracking-tighter">LEVEL 3</span>
+          </div>
+        </div>
       </div>
 
       {/* Stats */}
@@ -249,6 +277,124 @@ export default function Dashboard() {
         <FieldUpdates />
       </div>
 
+      {/* Advanced Analytics Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 rounded-lg border border-border bg-card p-6 shadow-card overflow-hidden relative">
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+            <TrendingUp className="h-24 w-24 text-primary" />
+          </div>
+          
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                <Shield className="h-4 w-4 text-primary" /> Incidents by Zone
+              </h2>
+              <p className="text-[11px] text-muted-foreground mt-1 italic">Operational density across metropolitan sectors</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground">
+                <span className="h-2 w-2 rounded-full bg-primary" /> High Priority
+              </div>
+              <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground">
+                <span className="h-2 w-2 rounded-full bg-info" /> Standby
+              </div>
+            </div>
+          </div>
+
+          <div className="h-[280px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={
+                [
+                  { zone: "Dharavi", count: 4, severity: "High" },
+                  { zone: "Andheri", count: 7, severity: "Critical" },
+                  { zone: "Kurla", count: 5, severity: "Medium" },
+                  { zone: "Thane", count: 3, severity: "Low" },
+                  { zone: "Borivali", count: 6, severity: "High" },
+                  { zone: "Bandra", count: 2, severity: "Low" },
+                ]
+              }>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                <XAxis 
+                  dataKey="zone" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }}
+                  dy={10}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: '#94a3b8', fontSize: 10 }}
+                />
+                <Tooltip 
+                  cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="bg-slate-900 border border-white/10 p-3 rounded-lg shadow-2xl backdrop-blur-md">
+                          <p className="text-xs font-bold text-white mb-1 uppercase tracking-wider">{payload[0].payload.zone}</p>
+                          <div className="flex items-center gap-2">
+                            <div className="h-2 w-2 rounded-full bg-primary" />
+                            <p className="text-sm font-black text-primary">{payload[0].value} <span className="text-[10px] text-muted-foreground font-normal">Active Incidents</span></p>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Bar 
+                  dataKey="count" 
+                  radius={[6, 6, 0, 0]} 
+                  barSize={40}
+                  onClick={(data) => setSelectedZone(data.zone)}
+                  className="cursor-pointer"
+                >
+                  {
+                    [4, 7, 5, 3, 6, 2].map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#DC2626' : '#2563EB'} fillOpacity={0.8} className="hover:fill-opacity-100 transition-all" />
+                    ))
+                  }
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-border bg-card p-6 shadow-card flex flex-col justify-between">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-6">Asset Health</h2>
+            <div className="space-y-6">
+              {[
+                { label: "Connectivity", value: 98, color: "bg-emerald-500" },
+                { label: "Fleet Readiness", value: 84, color: "bg-primary" },
+                { label: "Battery Avg (Drones)", value: 72, color: "bg-amber-500" },
+              ].map((item) => (
+                <div key={item.label} className="space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider">
+                    <span className="text-muted-foreground">{item.label}</span>
+                    <span className="text-white">{item.value}%</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full ${item.color} transition-all duration-1000`} 
+                      style={{ width: `${item.value}%` }} 
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <div className="mt-8 p-4 rounded-xl bg-gradient-to-br from-primary/20 to-transparent border border-primary/20">
+            <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">Commander's Insight</p>
+            <p className="text-xs text-muted-foreground leading-relaxed italic">
+              "Deployment density is currently peaking in **Andheri**. Recommend shifting standby units from Bandra."
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Incident Details Modal */}
       {viewingIncident && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
@@ -367,6 +513,78 @@ export default function Dashboard() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Zone Deep-Dive Modal */}
+      {selectedZone && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-end bg-black/40 backdrop-blur-sm animate-fade-in" onClick={() => setSelectedZone(null)}>
+          <div 
+            className="h-full w-full max-w-md bg-[#0F172A] border-l border-white/10 shadow-2xl p-8 animate-slide-in-right relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setSelectedZone(null)}
+              className="absolute top-6 right-6 p-2 rounded-full hover:bg-white/5 text-muted-foreground transition-all"
+            >
+              <X className="h-6 w-6" />
+            </button>
+
+            <div className="mb-10">
+              <div className="text-xs font-bold uppercase tracking-[0.3em] text-primary mb-2">Zone Deep-Dive</div>
+              <h2 className="text-4xl font-black text-white">{selectedZone}</h2>
+              <div className="flex items-center gap-3 mt-4">
+                <div className="flex -space-x-2">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="h-8 w-8 rounded-full border-2 border-[#0F172A] bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">U{i}</div>
+                  ))}
+                </div>
+                <span className="text-xs text-muted-foreground font-medium">12 Responders Active</span>
+              </div>
+            </div>
+
+            <div className="space-y-6 overflow-y-auto max-h-[calc(100vh-300px)] pr-2 custom-scrollbar">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground border-b border-white/5 pb-2">Active Mission Archive</h3>
+              <div className="space-y-3">
+                {incidents?.filter(i => i.location.includes(selectedZone) || (selectedZone === "Dharavi" && i.location.includes("Dharavi"))).map(incident => (
+                  <div key={incident.id} className="p-4 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] transition-all group cursor-pointer">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-[10px] font-mono text-primary font-bold">{incident.id}</span>
+                      <SeverityBadge severity={severityFromStatus(incident.status)} />
+                    </div>
+                    <div className="text-sm font-bold text-white group-hover:text-primary transition-colors">{incident.type} Emergency</div>
+                    <div className="text-[11px] text-muted-foreground mt-1 flex items-center gap-2">
+                      <Clock className="h-3 w-3" /> Reported {incident.time}
+                    </div>
+                  </div>
+                ))}
+                {(!incidents || incidents.filter(i => i.location.includes(selectedZone) || (selectedZone === "Dharavi" && i.location.includes("Dharavi"))).length === 0) && (
+                  <div className="py-10 text-center">
+                    <div className="text-xs text-muted-foreground italic">No historical data found for this specific sector.</div>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-6">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground border-b border-white/5 pb-2 mb-4">Resource Allocation</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                    <div className="text-[10px] uppercase font-bold text-emerald-500 mb-1">Medical</div>
+                    <div className="text-xl font-black text-white">4 Units</div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                    <div className="text-[10px] uppercase font-bold text-blue-500 mb-1">Extraction</div>
+                    <div className="text-xl font-black text-white">2 Units</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="absolute bottom-8 left-8 right-8">
+              <button className="w-full py-4 rounded-xl bg-white text-black font-black text-xs uppercase tracking-widest hover:bg-gray-200 transition-all shadow-xl shadow-white/5">
+                Generate Sector Report
+              </button>
             </div>
           </div>
         </div>
