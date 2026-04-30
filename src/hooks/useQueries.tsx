@@ -2,7 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/supabase";
 import * as mockData from "@/data/mock";
 
-const isDemo = () => localStorage.getItem("demo_bypass") === "true";
+const isDemo = () => {
+  const bypass = localStorage.getItem("demo_bypass") === "true";
+  const missingKeys = !import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes("placeholder");
+  return bypass || missingKeys;
+};
 
 export const useTeamsQuery = () => {
   return useQuery({
