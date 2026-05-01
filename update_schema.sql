@@ -5,7 +5,18 @@
 --  Run this entire file once in the Supabase SQL Editor.
 -- ============================================================
 
--- (Make sure to delete the existing tables in Supabase Dashboard first)
+-- 0. CLEAN SLATE (Drops all existing tables to prevent schema conflicts)
+DROP TABLE IF EXISTS public.teams CASCADE;
+DROP TABLE IF EXISTS public.incidents CASCADE;
+DROP TABLE IF EXISTS public.vehicles CASCADE;
+DROP TABLE IF EXISTS public.alerts CASCADE;
+DROP TABLE IF EXISTS public.field_updates CASCADE;
+DROP TABLE IF EXISTS public.supplies CASCADE;
+DROP TABLE IF EXISTS public.volunteers CASCADE;
+DROP TABLE IF EXISTS public.drones CASCADE;
+DROP TABLE IF EXISTS public.risk_points CASCADE;
+DROP TABLE IF EXISTS public.sos_reports CASCADE;
+DROP TABLE IF EXISTS public.allowed_users CASCADE;
 
 -- ────────────────────────────────────────────────────────────
 -- 1. TEAMS
