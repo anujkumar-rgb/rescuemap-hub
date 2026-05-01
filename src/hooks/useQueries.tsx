@@ -3,9 +3,7 @@ import { supabase } from "@/supabase";
 import * as mockData from "@/data/mock";
 
 const isDemo = () => {
-  const bypass = localStorage.getItem("demo_bypass") === "true";
-  const missingKeys = !import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes("placeholder");
-  return bypass || missingKeys;
+  return localStorage.getItem("demo_bypass") === "true";
 };
 
 export const useTeamsQuery = () => {
