@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { LogOut } from "lucide-react";
 import { Button } from "./ui/button";
 import { supabase } from "@/supabase";
+import AdminAIChat from "./AdminAIChat";
 
 const links = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -278,6 +279,8 @@ export default function Layout() {
           </div>
         </div>
       )}
+      
+      <AdminAIChat />
     </div>
   );
 }
