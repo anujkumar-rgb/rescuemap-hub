@@ -5,12 +5,7 @@ import { useIncidentsQuery, useSuppliesQuery } from "@/hooks/useQueries";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/supabase";
 import { jsPDF } from "jspdf";
-import "jspdf-autotable";
-
-// Add type for jsPDF with autoTable support
-interface jsPDFWithPlugin extends jsPDF {
-  autoTable: (options: any) => jsPDF;
-}
+import autoTable from "jspdf-autotable";
 
 const supplyStatusVariant = (s: string): "green" | "amber" | "red" =>
   s === "Sufficient" ? "green" : s === "Low" ? "amber" : "red";
@@ -125,7 +120,7 @@ export default function Reports() {
   const handleExportPDF = () => {
     if (!viewingReport) return;
 
-    const doc = new jsPDF() as jsPDFWithPlugin;
+    const doc = new jsPDF();
     const timestamp = new Date().toLocaleString();
 
     // Header
@@ -153,7 +148,7 @@ export default function Reports() {
     doc.text(`Status: ${viewingReport.status.toUpperCase()}`, 140, 62);
 
     // Core Information Table
-    doc.autoTable({
+    autoTable(doc, {
       startY: 75,
       head: [['CATEGORY', 'DETAILS']],
       body: [
@@ -175,7 +170,7 @@ export default function Reports() {
     doc.setFont("helvetica", "bold");
     doc.text("OPERATIONAL TIMELINE", 20, (doc as any).lastAutoTable.finalY + 15);
 
-    doc.autoTable({
+    autoTable(doc, {
       startY: (doc as any).lastAutoTable.finalY + 20,
       head: [['TIME', 'EVENT DESCRIPTION']],
       body: logs.map(l => [l.time, l.msg]),
